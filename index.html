@@ -549,8 +549,8 @@
     // 지면(변형 가능)
     let groundMesh = null;
     let groundPositions = null;
-    const GROUND_SIZE = 60;
-    const GROUND_SEG = 80;
+    const GROUND_SIZE = 80;
+    const GROUND_SEG = 100;
 
     function updateCameraOrbit() {
       const r = orbit.radius;
@@ -568,74 +568,106 @@
     }
 
     /* ================== 지형/환경 ================== */
-    function createTerrain() {
-    const geo = new THREE.PlaneGeometry(TERRAIN_SIZE, TERRAIN_SIZE, TERRAIN_RES, TERRAIN_RES);
-    geo.rotateX(-Math.PI / 2);
+    function createGround() {
+      const geo = new THREE.PlaneGeometry(
+        GROUND_SIZE,
+        GROUND_SIZE,
+        GROUND_SEG,
+        GROUND_SEG
+      );
+      geo.rotateX(-Math.PI / 2);
 
-    const pos = geo.attributes.position;
-    const col = new THREE.Float32BufferAttribute((TERRAIN_RES + 1) * (TERRAIN_RES + 1) * 3, 3);
+      const pos = geo.attributes.position;
+      const colors = new Float32Array(pos.count * 3);
+      const colorAttr = new THREE.BufferAttribute(colors, 3);
+      geo.setAttribute("color", colorAttr);
 
-    // 기본 색
-    const baseC = new THREE.Color(0xC2B280);  // 흙색
-    const hillC = new THREE.Color(0x8d6e63);  // 갈색
-    const shadowC = new THREE.Color(0x5d4037); // 어두운 부분
+      const baseC = new THREE.Color(0xc2b280); // 기본 흙
+      const hillC = new THREE.Color(0x8d6e63); // 언덕 갈색
+      const shadowC = new THREE.Color(0x5d4037); // 높은 곳 어둡게
 
-    // 랜덤 언덕 설정
-    const hills = [
+      const hills = [
         { x: -20, z: -10, height: 4, radius: 18 },
-        { x: 15,  z: 20,  height: 3.5, radius: 15 },
-        { x: 0,   z: -25, height: 5, radius: 20 },
-        { x: -25, z: 10,  height: 2.5, radius: 10 },
-        { x: 25,  z: -15, height: 3, radius: 12 }
-    ];
+        { x: 15, z: 20, height: 3.5, radius: 15 },
+        { x: 0, z: -25, height: 5, radius: 20 },
+        { x: -30, z: 15, height: 2.5, radius: 12 },
+        { x: 25, z: -15, height: 3, radius: 14 },
+      ];
 
-    // Perlin noise로 전체 지형 자연스럽게
-    function noise(nx, ny) {
-        return (Math.sin(nx * 3.1 + ny * 1.7) + Math.cos(nx * 2.2 - ny * 4.3)) * 0.5;
-    }
+      function noise(nx, ny) {
+        return (
+          (Math.sin(nx * 3.1 + ny * 1.7) +
+            Math.cos(nx * 2.2 - ny * 4.3)) * 0.5
+        );
+      }
 
-    for (let i = 0; i < pos.count; i++) {
+      for (let i = 0; i < pos.count; i++) {
         let x = pos.getX(i);
         let z = pos.getZ(i);
 
-        // 기본 노이즈 지형
+        // 전체 노이즈 베이스
         let h = noise(x * 0.03, z * 0.03) * 1.2;
 
-        // 언덕 생성
-        hills.forEach(hill => {
-            const dx = x - hill.x;
-            const dz = z - hill.z;
-            const d = Math.sqrt(dx * dx + dz * dz);
-
-            if (d < hill.radius) {
-                // 부드러운 언덕 곡선
-                const t = 1 - d / hill.radius;
-                h += hill.height * (t * t);
-            }
+        // 언덕 추가
+        hills.forEach((hill) => {
+          const dx = x - hill.x;
+          const dz = z - hill.z;
+          const d = Math.sqrt(dx * dx + dz * dz);
+          if (d < hill.radius) {
+            const t = 1 - d / hill.radius;
+            h += hill.height * t * t; // 부드러운 곡선
+          }
         });
 
-        // 포크레인 스폰 지역은 평평하게
+        // 포크레인 스폰 영역은 평평하게
         if (Math.sqrt(x * x + z * z) < 8) h = 0;
 
         pos.setY(i, h);
-        terrainData[i] = h;
 
-        // 색상 그라데이션
+        // 높이에 따른 색상
         let c = baseC.clone().lerp(hillC, h / 5);
-
-        // 언덕이 높으면 약간 어둡게
         if (h > 2) c = c.lerp(shadowC, 0.3);
 
-        col.setXYZ(i, c.r, c.g, c.b);
+        colorAttr.setXYZ(i, c.r, c.g, c.b);
+      }
+
+      geo.computeVertexNormals();
+
+      const mat = new THREE.MeshStandardMaterial({
+        vertexColors: true,
+        roughness: 0.9,
+        metalness: 0.1,
+      });
+
+      groundMesh = new THREE.Mesh(geo, mat);
+      groundMesh.receiveShadow = true;
+      scene.add(groundMesh);
+      groundPositions = geo.attributes.position;
     }
 
-    geo.setAttribute("color", col);
-    geo.computeVertexNormals();
+    // 지점 기준 변형 (delta > 0: 쌓기, delta < 0: 파기)
+    function deformGround(worldPos, delta, radius = 1.4, maxH = 1.8) {
+      if (!groundMesh || !groundPositions) return;
 
-    terrainMesh = new THREE.Mesh(geo, MATS.dirt);
-    terrainMesh.receiveShadow = true;
-    scene.add(terrainMesh);
-}
+      const local = groundMesh.worldToLocal(worldPos.clone());
+      const temp = new THREE.Vector3();
+      const count = groundPositions.count;
+
+      for (let i = 0; i < count; i++) {
+        temp.fromBufferAttribute(groundPositions, i);
+        const dx = temp.x - local.x;
+        const dz = temp.z - local.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        if (dist < radius) {
+          const factor = 1 - dist / radius;
+          let newY = temp.y + delta * factor * 1.8; // 효과 증폭
+          newY = THREE.MathUtils.clamp(newY, -3.0, maxH);
+          groundPositions.setY(i, newY);
+        }
+      }
+      groundPositions.needsUpdate = true;
+      groundMesh.geometry.computeVertexNormals();
+    }
 
     // 버킷이 지나간 경로(선)를 따라 여러 지점 변형
     function deformGroundAlongSegment(
@@ -676,8 +708,8 @@
         str.position.y = 0.35;
         grp.add(base, str);
         const a = (i / 8) * Math.PI * 2;
-        const x = Math.cos(a) * 12;
-        const z = Math.sin(a) * 12;
+        const x = Math.cos(a) * 18;
+        const z = Math.sin(a) * 18;
         grp.position.set(x, 0, z);
         grp.castShadow = true;
         scene.add(grp);
@@ -929,7 +961,7 @@
       if (inputs.arm) excavator.armAng += inputs.arm * SPEED.joint;
       if (inputs.bucket) excavator.bucketAng += inputs.bucket * SPEED.joint;
 
-      // 각도 제한 (버킷 약 100도 정도)
+      // 각도 제한 (버킷 약 100도 정도 느낌)
       excavator.boomAng = THREE.MathUtils.clamp(
         excavator.boomAng,
         -0.1,
@@ -974,9 +1006,9 @@
             prevTipWorld,
             tipWorld,
             -0.06, // 파기 강도
-            5,     // 스텝 수
-            1.1,   // 반경
-            0.6    // 위로 올라갈 수 있는 최대 높이
+            5, // 스텝 수
+            1.1, // 반경
+            0.6 // 위로 올라갈 수 있는 최대 높이
           );
 
           soundMgr.playDig();
@@ -1149,29 +1181,28 @@
 
     function setupUI() {
       const startBtn = document.getElementById("start-btn");
-if (startBtn) {
-  const startGame = () => {
-    const ov = document.getElementById("start-overlay");
-    if (ov) ov.style.display = "none";
-    soundMgr.init();
-  };
+      if (startBtn) {
+        const startGame = () => {
+          const ov = document.getElementById("start-overlay");
+          if (ov) ov.style.display = "none";
+          soundMgr.init();
+        };
 
-  // PC / 데스크탑용
-  startBtn.addEventListener("click", (e) => {
-    e.preventDefault();
-    startGame();
-  });
+        // PC 클릭
+        startBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          startGame();
+        });
 
-  // 📱 모바일(티스토리 앱/브라우저)용 – 터치 제스처 직접 처리
-  startBtn.addEventListener(
-    "touchstart",
-    (e) => {
-      e.preventDefault(); // 클릭으로 변환되는 걸 기다리지 말고 바로 실행
-      startGame();
-    },
-    { passive: false }
-  );
-
+        // 📱 모바일(티스토리 포함) 터치
+        startBtn.addEventListener(
+          "touchstart",
+          (e) => {
+            e.preventDefault();
+            startGame();
+          },
+          { passive: false }
+        );
       }
 
       const resetBtn = document.getElementById("reset-btn");
@@ -1192,7 +1223,7 @@ if (startBtn) {
         });
       }
 
-      // 공유 버튼 (모바일/인앱에서도 무조건 뭔가 뜨게)
+      // 공유 버튼
       const shareBtn = document.getElementById("share-btn");
       if (shareBtn) {
         shareBtn.addEventListener("click", async () => {
@@ -1407,5 +1438,3 @@ if (startBtn) {
   </script>
 </body>
 </html>
-
-
