@@ -310,10 +310,10 @@
     }
   </style>
 
-  <!-- three.js + OrbitControls + RoundedBoxGeometry (jsDelivr) -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/geometries/RoundedBoxGeometry.js"></script>
+  <!-- three.js + OrbitControls + RoundedBoxGeometry (local files) -->
+  <script src="three.min.js"></script>
+  <script src="OrbitControls.js"></script>
+  <script src="RoundedBoxGeometry.js"></script>
 </head>
 <body>
   <div id="excavator-wrapper">
@@ -448,8 +448,7 @@
   <script>
     (function () {
       if (!window.THREE) {
-        // 더 이상 alert 안 띄우고, 조용히 포기
-        console.error("THREE가 로드되지 않았습니다.");
+        console.error("THREE가 로드되지 않았습니다. three.min.js 확인 필요");
         return;
       }
 
@@ -617,11 +616,11 @@
         var ctx = c.getContext("2d");
         ctx.fillStyle = "#111";
         ctx.fillRect(0, 0, 512, 128);
-        ctx.strokeStyle = "#FFD700";
+        ctx.strokeStyle = "#ffd700";
         ctx.lineWidth = 4;
         ctx.strokeRect(4, 4, 504, 120);
         ctx.font = "bold 46px sans-serif";
-        ctx.fillStyle = "#FFD700";
+        ctx.fillStyle = "#ffd700";
         ctx.textAlign = "center";
         ctx.fillText("컴넷하우스", 256, 60);
         ctx.font = "24px sans-serif";
@@ -752,7 +751,7 @@
         var h01 = terrainData[i01],
           h11 = terrainData[i11];
         var h0 = h00 * (1 - tx) + h10 * tx;
-        var h1 = h01 * (1 - tz) + h11 * tx;
+        var h1 = h01 * (1 - tx) + h11 * tx;
         return h0 * (1 - tz) + h1 * tz;
       }
 
@@ -956,7 +955,16 @@
           bg.add(t);
         }
 
-        var dvg = new THREEjs.CylinderGeometry(0.4, 0.4, bw, 8, 1, false, 0, Math.PI);
+        var dvg = new THREEjs.CylinderGeometry(
+          0.4,
+          0.4,
+          bw,
+          8,
+          1,
+          false,
+          0,
+          Math.PI
+        );
         excavator.dirtVolume = new THREEjs.Mesh(dvg, MATS.dirtPile);
         excavator.dirtVolume.rotation.x = Math.PI / 2;
         excavator.dirtVolume.position.set(0.2, 0.3, 0);
@@ -1114,7 +1122,7 @@
           excavator.bucketAng,
           -0.2,
           1.5
-        ); // 약 85~90도 정도
+        ); // 약 100도 이하 회전
 
         excavator.boom.rotation.x = excavator.boomAng;
         excavator.arm.rotation.x = excavator.armAng;
