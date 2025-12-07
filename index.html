@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>REAL EXCAVATOR V48 PRO - Physics</title>
+  <title>REAL EXCAVATOR V48 PRO - Dozer Mode</title>
   <meta
     name="viewport"
     content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"
@@ -312,7 +312,8 @@
       <h1>REAL EXCAVATOR V48 PRO</h1>
       <p>
         PC: 방향키(이동), WASD(붐/암), F/R(버킷)<br>
-        Mobile: 화면 하단 컨트롤러 사용
+        Mobile: 화면 하단 컨트롤러 사용<br>
+        <span style="color:#ffd700">TIP: 언덕을 만나면 계속 전진하여 밀어내세요!</span>
       </p>
       <button id="start-btn" type="button">작업 시작</button>
     </div>
@@ -827,36 +828,27 @@
        const ray = new THREE.Raycaster();
        const down = new THREE.Vector3(0,-1,0);
        
-       // Collision check positions
        const trackPos = excavator.group.position.clone();
-       // Use center of bucket roughly for pushing
        const bucketPos = new THREE.Vector3();
        if(excavator.bucket) excavator.bucket.getWorldPosition(bucketPos);
        
        gameRocks.forEach(r => {
-         // 1. Gravity
          r.velocity.y -= 0.015;
-         
-         // 2. Air drag / Friction
          r.velocity.multiplyScalar(0.98);
-         
-         // 3. Move
          r.mesh.position.add(r.velocity);
          
-         // 4. Ground Collision
          ray.set(new THREE.Vector3(r.mesh.position.x, 20, r.mesh.position.z), down);
          const hits = ray.intersectObject(groundMesh);
          if(hits.length > 0) {
            const h = hits[0].point.y;
            if(r.mesh.position.y < h + r.radius) {
              r.mesh.position.y = h + r.radius;
-             r.velocity.y *= -0.3; // Bounce damping
-             r.velocity.x *= 0.8; // Friction on ground
+             r.velocity.y *= -0.3; 
+             r.velocity.x *= 0.8; 
              r.velocity.z *= 0.8;
            }
          }
          
-         // 5. Excavator Chassis Collision (Cylinder approximation)
          const dTrack = new THREE.Vector2(r.mesh.position.x - trackPos.x, r.mesh.position.z - trackPos.z);
          if(dTrack.length() < 2.5 + r.radius) {
             const pushDir = dTrack.normalize();
@@ -865,37 +857,58 @@
             r.velocity.z += pushDir.y * pushForce;
          }
          
-         // 6. Bucket Collision
-         // Check distance to bucket center
          const distBucket = r.mesh.position.distanceTo(bucketPos);
          if(distBucket < 1.3 + r.radius) {
-            // Repel from bucket
             const pushDir = new THREE.Vector3().subVectors(r.mesh.position, bucketPos).normalize();
-            // Give it a kick based on movement or static repulsion
             r.velocity.add(pushDir.multiplyScalar(0.15));
-            // Add spin
             r.velocity.x += (Math.random()-0.5)*0.05;
          }
          
-         // Limit speed
          r.velocity.clampLength(0, 0.8);
-         
-         // Rolling rotation effect based on horizontal speed
          r.mesh.rotation.x += r.velocity.z * 0.5;
          r.mesh.rotation.z -= r.velocity.x * 0.5;
        });
     }
 
     function updatePhysics() {
-      // 1. Move Tracks
+      // 1. Move Tracks with Dozing Logic
       if(Math.abs(inputs.fwd) > 0 || Math.abs(inputs.turn) > 0) {
-        const move = inputs.fwd * SPEED.move;
+        let move = inputs.fwd * SPEED.move;
         const rot = inputs.turn * SPEED.turn;
         
         excavator.group.rotation.y += rot;
         
         const dirX = Math.cos(-excavator.group.rotation.y); 
         const dirZ = Math.sin(-excavator.group.rotation.y);
+
+        // DOZING CHECK (Only when moving forward)
+        if(inputs.fwd > 0 && groundMesh) {
+            const frontDist = 2.0;
+            const frontPos = excavator.group.position.clone().add(
+                new THREE.Vector3(dirX, 0, dirZ).multiplyScalar(frontDist)
+            );
+            
+            // Check height at front
+            const rayOrigin = frontPos.clone();
+            rayOrigin.y = 20;
+            downRay.set(rayOrigin, downDir);
+            const hits = downRay.intersectObject(groundMesh);
+            
+            if(hits.length > 0) {
+                const frontH = hits[0].point.y;
+                const myH = excavator.group.position.y;
+                
+                // If the slope is too steep (> 0.4 height difference)
+                if(frontH > myH + 0.4) {
+                    // Cut the ground down (Dozing)
+                    deformGround(hits[0].point, -0.15);
+                    spawnDust(hits[0].point);
+                    
+                    // Add resistance (slow down)
+                    move *= 0.4;
+                }
+            }
+        }
         
         excavator.group.position.x += dirX * move;
         excavator.group.position.z += dirZ * move;
@@ -909,7 +922,16 @@
         const intersects = downRay.intersectObject(groundMesh);
         if(intersects.length > 0) {
           const groundHeight = intersects[0].point.y;
-          excavator.group.position.y += (groundHeight - excavator.group.position.y) * 0.2;
+          // Smooth climb, but don't snap instantly if gap is huge (prevent wall climbing)
+          const diff = groundHeight - excavator.group.position.y;
+          if(diff > 0.8) {
+              // Too high to climb, stay low (effectively blocked until dozed)
+              // Only slightly nudge up
+              excavator.group.position.y += diff * 0.02;
+          } else {
+              // Normal climbing
+              excavator.group.position.y += diff * 0.2;
+          }
         } else {
           excavator.group.position.y = Math.max(0, excavator.group.position.y);
         }
