@@ -8,19 +8,19 @@
     content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"
   />
   <style>
-    body {
+    html, body {
       margin: 0;
+      height: 100%;
+      background: #000;
       font-family: "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont,
         sans-serif;
-      background: #000;
     }
 
-    /* 전체 게임 래퍼 (iframe 안에서만 꽉 채우는 용도) */
+    /* 전체 게임 래퍼 (iframe 안에서도 꽉 차게) */
     #excavator-wrapper {
       position: relative;
       width: 100%;
-      height: 100vh;
-      max-height: 720px;
+      height: 100vh; /* iframe 안의 높이만큼 꽉 채움 */
       background: #050505;
       overflow: hidden;
       box-sizing: border-box;
@@ -107,10 +107,10 @@
       color: #000;
     }
 
-    /* 미션 박스 (조금 아래로 내림) */
+    /* 미션 박스 (약간 아래로) */
     #mission-box {
       position: absolute;
-      top: 60px; /* 기존보다 아래로 */
+      top: 60px;
       left: 50%;
       transform: translateX(-50%);
       background: rgba(0, 0, 0, 0.7);
@@ -226,7 +226,7 @@
       position: absolute;
       left: 0;
       right: 0;
-      bottom: 20px; /* bottom: 0; 에서 위로 20px 올림 */
+      bottom: 20px; /* 위로 20px 올림 */
       padding: 8px 10px;
       display: flex;
       justify-content: space-between;
@@ -291,7 +291,7 @@
     }
   </style>
 
-  <!-- three.js만 사용 -->
+  <!-- three.js -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 </head>
 <body>
@@ -512,6 +512,7 @@
 
     const particles = [];
     const gameState = { dirtLoad: 0, hasDug: false, hasDumped: false };
+    let lastTipWorld = null;
 
     const missions = [
       {
@@ -548,8 +549,8 @@
     // 지면(변형 가능)
     let groundMesh = null;
     let groundPositions = null;
-    let GROUND_SIZE = 60;
-    let GROUND_SEG = 80;
+    const GROUND_SIZE = 60;
+    const GROUND_SEG = 80;
 
     function updateCameraOrbit() {
       const r = orbit.radius;
@@ -585,10 +586,11 @@
       groundPositions = groundGeo.attributes.position;
     }
 
-    function deformGround(worldPos, delta) {
+    // 지점 하나 기준 변형 (delta > 0: 쌓기, delta < 0: 파기)
+    function deformGround(worldPos, delta, radius = 1.4, maxH = 1.8) {
       if (!groundMesh || !groundPositions) return;
+
       const local = groundMesh.worldToLocal(worldPos.clone());
-      const radius = 1.2;
       const temp = new THREE.Vector3();
       const count = groundPositions.count;
 
@@ -599,14 +601,31 @@
         const dist = Math.sqrt(dx * dx + dz * dz);
         if (dist < radius) {
           const factor = 1 - dist / radius;
-          let newY = temp.y + delta * factor;
-          // 너무 깊거나 높지 않게 제한
-          newY = THREE.MathUtils.clamp(newY, -1.0, 1.0);
+          let newY = temp.y + delta * factor * 1.8; // 효과 증폭
+          newY = THREE.MathUtils.clamp(newY, -1.5, maxH);
           groundPositions.setY(i, newY);
         }
       }
       groundPositions.needsUpdate = true;
       groundMesh.geometry.computeVertexNormals();
+    }
+
+    // 버킷이 지나간 경로(선)를 따라 여러 지점 변형
+    function deformGroundAlongSegment(
+      p0,
+      p1,
+      delta,
+      steps = 4,
+      radius = 1.4,
+      maxH = 1.8
+    ) {
+      if (!p0 || !p1) return;
+      const pos = new THREE.Vector3();
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        pos.lerpVectors(p0, p1, t);
+        deformGround(pos, delta, radius, maxH);
+      }
     }
 
     function createEnvironment() {
@@ -809,32 +828,35 @@
 
     /* ================== 유틸 ================== */
     function spawnParticle(pos, type) {
-      const geo = new THREE.PlaneGeometry(0.3, 0.3);
+      const geo = new THREE.PlaneGeometry(
+        0.25 + Math.random() * 0.2,
+        0.25 + Math.random() * 0.2
+      );
       const mat =
         type === "dust"
           ? new THREE.MeshBasicMaterial({
               color: 0xd7ccc8,
               transparent: true,
-              opacity: 0.3,
+              opacity: 0.4,
               depthWrite: false,
             })
           : new THREE.MeshStandardMaterial({
               color: 0x5d4037,
-              roughness: 1.0,
+              roughness: 0.9,
             });
       const mesh = new THREE.Mesh(geo, mat);
       mesh.position.copy(pos);
-      mesh.position.x += (Math.random() - 0.5) * 0.5;
-      mesh.position.z += (Math.random() - 0.5) * 0.5;
+      mesh.position.x += (Math.random() - 0.5) * 0.4;
+      mesh.position.z += (Math.random() - 0.5) * 0.4;
       mesh.lookAt(camera.position);
       scene.add(mesh);
       particles.push({
         mesh,
         life: 1,
         vel: new THREE.Vector3(
-          (Math.random() - 0.5) * 0.05,
-          0.05,
-          (Math.random() - 0.5) * 0.05
+          (Math.random() - 0.5) * 0.08,
+          0.06 + Math.random() * 0.04,
+          (Math.random() - 0.5) * 0.08
         ),
       });
     }
@@ -869,7 +891,7 @@
         excavator.group.position.z -=
           Math.sin(excavator.group.rotation.y) * spd;
       }
-      // 높이 고정 (땅 속에 안 파묻히게)
+      // 땅 속에 안 파묻히게 고정
       excavator.group.position.y = 0;
 
       // 상부 회전
@@ -880,7 +902,7 @@
       if (inputs.arm) excavator.armAng += inputs.arm * SPEED.joint;
       if (inputs.bucket) excavator.bucketAng += inputs.bucket * SPEED.joint;
 
-      // 각도 제한 (버킷 약 100도 느낌)
+      // 각도 제한 (버킷 약 100도 정도)
       excavator.boomAng = THREE.MathUtils.clamp(
         excavator.boomAng,
         -0.1,
@@ -901,29 +923,63 @@
       excavator.arm.rotation.x = excavator.armAng;
       excavator.bucket.rotation.x = excavator.bucketAng;
 
-      // 버킷 끝 위치
+      // 버킷 끝 위치 + 이전 위치
       const tipWorld = new THREE.Vector3();
       excavator.bucketTip.getWorldPosition(tipWorld);
 
-      // 지면(0 근처) 터치 판정
+      if (!lastTipWorld) {
+        lastTipWorld = tipWorld.clone();
+      }
+      const prevTipWorld = lastTipWorld.clone();
+      lastTipWorld.copy(tipWorld);
+
+      // 지면 터치 판정
       const touching = tipWorld.y <= 0.15;
+
+      // F: 땅파기
       if (touching && inputs.bucket > 0) {
-        // 땅 파기
         gameState.hasDug = true;
         if (gameState.dirtLoad < 1) {
           gameState.dirtLoad += 0.005;
-          deformGround(tipWorld, -0.03); // 땅 살짝 파기
+
+          // 버킷이 지나간 선 전체를 따라 골 파기
+          deformGroundAlongSegment(
+            prevTipWorld,
+            tipWorld,
+            -0.06, // 파기 강도
+            5,     // 스텝 수
+            1.1,   // 반경
+            0.6    // 위로 올라갈 수 있는 최대 높이
+          );
+
           soundMgr.playDig();
-          spawnParticle(tipWorld, "dust");
+          for (let i = 0; i < 4; i++) {
+            spawnParticle(tipWorld, "dust");
+          }
         }
       }
 
-      // Dump
+      // R: 덤프
       if (inputs.bucket < 0 && gameState.dirtLoad > 0) {
         gameState.hasDumped = true;
         gameState.dirtLoad -= 0.01;
-        deformGround(tipWorld, 0.04); // 땅 위로 흙 쌓기
-        spawnParticle(tipWorld, "dirt");
+
+        // 이동 경로를 따라 흙 쌓이게
+        deformGroundAlongSegment(
+          prevTipWorld,
+          tipWorld,
+          0.18, // 쌓이는 강도
+          5,
+          1.4,
+          1.8
+        );
+
+        for (let i = 0; i < 3; i++) {
+          spawnParticle(tipWorld, "dirt");
+        }
+        for (let i = 0; i < 2; i++) {
+          spawnParticle(tipWorld, "dust");
+        }
       }
 
       // 버킷 안 흙
@@ -973,7 +1029,8 @@
         excavator.dirtVolume.visible = false;
       }
 
-      // 지형 되돌리기는 간단 버전에서는 생략 (계속 작업 흔적 남기는 재미)
+      lastTipWorld = null;
+
       particles.forEach((p) => scene.remove(p.mesh));
       particles.length = 0;
 
@@ -1105,9 +1162,7 @@
                 await navigator.clipboard.writeText(url);
                 alert("현재 페이지 주소를 클립보드에 복사했습니다.");
                 return;
-              } catch (e) {
-                // 실패하면 프롬프트
-              }
+              } catch (e) {}
             }
             prompt("이 주소를 복사해서 공유해 주세요:", url);
           }
@@ -1116,7 +1171,6 @@
             try {
               await navigator.share({ title, text, url });
             } catch (e) {
-              // 인앱/iframe에서 막힌 경우 등 → fallback
               await fallbackShare();
             }
           } else {
@@ -1191,6 +1245,12 @@
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
         p.life -= 0.02;
+
+        // 중력 + 감속
+        p.vel.y -= 0.003;
+        p.vel.x *= 0.99;
+        p.vel.z *= 0.99;
+
         p.mesh.position.add(p.vel);
         p.mesh.lookAt(camera.position);
         p.mesh.material.opacity = p.life * 0.5;
