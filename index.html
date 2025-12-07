@@ -309,10 +309,8 @@
     }
   </style>
 
-  <!-- three.js + OrbitControls + RoundedBoxGeometry (전역 THREE 사용 버전) -->
+  <!-- three.js만 사용 (OrbitControls, RoundedBoxGeometry 전부 제거) -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/geometries/RoundedBoxGeometry.js"></script>
 </head>
 <body>
   <div id="excavator-wrapper">
@@ -530,7 +528,7 @@
     const soundMgr = new SoundManager();
 
     // ===== 전역 상태 =====
-    let scene, camera, renderer, controls;
+    let scene, camera, renderer;
     const excavator = {
       group: null,
       body: null,
@@ -558,8 +556,6 @@
 
     let raycaster, mouse;
     const particles = [];
-    let lastExcavatorPos = new THREE.Vector3();
-    let shakeIntensity = 0;
 
     const gameState = { dirtLoad: 0, hasDug: false, hasDumped: false };
     const missions = [
@@ -580,7 +576,33 @@
     ];
     let currentMissionIdx = 0;
 
-    // ===== 유틸 =====
+    // 카메라 오비트(직접 구현)
+    const orbit = {
+      theta: Math.PI / 4,
+      phi: Math.PI / 4,
+      radius: 20,
+      target: new THREE.Vector3(0, 1.5, 0),
+      isDragging: false,
+      lastX: 0,
+      lastY: 0,
+    };
+
+    function updateCameraOrbit() {
+      const r = orbit.radius;
+      const t = orbit.theta;
+      const p = orbit.phi;
+      const ct = Math.cos(t),
+        st = Math.sin(t);
+      const cp = Math.cos(p),
+        sp = Math.sin(p);
+
+      const x = orbit.target.x + r * sp * ct;
+      const y = orbit.target.y + r * cp;
+      const z = orbit.target.z + r * sp * st;
+      camera.position.set(x, y, z);
+      camera.lookAt(orbit.target);
+    }
+
     function getTerrainHeight(x, z) {
       const half = TERRAIN_SIZE / 2;
       let gx = ((x + half) / TERRAIN_SIZE) * TERRAIN_RES;
@@ -770,7 +792,7 @@
       excavator.group = new THREE.Group();
       scene.add(excavator.group);
 
-      // 하부(트랙)
+      // 하부 트랙
       const tracks = new THREE.Group();
       excavator.group.add(tracks);
       const trackMat = new THREE.MeshStandardMaterial({
@@ -806,7 +828,7 @@
         metalness: 0.3,
       });
       const deck = new THREE.Mesh(
-        new THREE.RoundedBoxGeometry(3.6, 1.2, 3.4, 4, 0.2),
+        new THREE.BoxGeometry(3.6, 1.2, 3.4),
         bodyMat
       );
       deck.position.set(-0.4, 0.6, 0);
@@ -819,7 +841,7 @@
       excavator.body.add(excavator.boom);
 
       const boomMesh = new THREE.Mesh(
-        new THREE.RoundedBoxGeometry(0.8, 6.0, 0.6, 4, 0.15),
+        new THREE.BoxGeometry(0.8, 6.0, 0.6),
         bodyMat
       );
       boomMesh.position.set(0, 3.0, 0);
@@ -1116,7 +1138,6 @@
             modifyTerrain(tipWorld.x, tipWorld.z, -0.15);
             soundMgr.playDig();
             spawnParticle(tipWorld, "dust");
-            shakeIntensity = 0.05;
           }
         }
       }
@@ -1146,7 +1167,6 @@
     }
 
     function resetGame() {
-      // 입력 초기화
       for (const k in inputs) inputs[k] = 0;
       gameState.dirtLoad = 0;
       gameState.hasDug = false;
@@ -1199,10 +1219,15 @@
       particles.forEach((p) => scene.remove(p.mesh));
       particles.length = 0;
 
-      camera.position.set(15, 12, 15);
-      controls.target.set(0, 1.5, 0);
-      controls.update();
-      lastExcavatorPos.copy(excavator.group.position);
+      orbit.radius = 20;
+      orbit.theta = Math.PI / 4;
+      orbit.phi = Math.PI / 4;
+      orbit.target.set(
+        excavator.group.position.x,
+        excavator.group.position.y + 1.5,
+        excavator.group.position.z
+      );
+      updateCameraOrbit();
     }
 
     function setupInput() {
@@ -1280,7 +1305,6 @@
     }
 
     function setupUI() {
-      // 작업 시작
       const startBtn = document.getElementById("start-btn");
       if (startBtn) {
         startBtn.addEventListener("click", () => {
@@ -1290,16 +1314,13 @@
         });
       }
 
-      // 초기화
       const resetBtn = document.getElementById("reset-btn");
       if (resetBtn) resetBtn.addEventListener("click", resetGame);
 
-      // 사운드
       const soundBtn = document.getElementById("sound-btn");
       if (soundBtn)
         soundBtn.addEventListener("click", () => soundMgr.toggleMute());
 
-      // 가이드 토글
       const guideBtn = document.getElementById("guide-toggle-btn");
       if (guideBtn) {
         guideBtn.addEventListener("click", () => {
@@ -1311,7 +1332,6 @@
         });
       }
 
-      // 공유
       const shareBtn = document.getElementById("share-btn");
       if (shareBtn) {
         shareBtn.addEventListener("click", async () => {
@@ -1364,12 +1384,38 @@
       }
     }
 
+    // 마우스 드래그로 카메라 회전
+    function onPointerDown(e) {
+      orbit.isDragging = true;
+      const point = e.touches ? e.touches[0] : e;
+      orbit.lastX = point.clientX;
+      orbit.lastY = point.clientY;
+    }
+    function onPointerMove(e) {
+      if (!orbit.isDragging) return;
+      const point = e.touches ? e.touches[0] : e;
+      const dx = point.clientX - orbit.lastX;
+      const dy = point.clientY - orbit.lastY;
+      orbit.lastX = point.clientX;
+      orbit.lastY = point.clientY;
+
+      orbit.theta -= dx * 0.005;
+      orbit.phi -= dy * 0.003;
+      const minPhi = 0.2;
+      const maxPhi = Math.PI / 2 - 0.1;
+      if (orbit.phi < minPhi) orbit.phi = minPhi;
+      if (orbit.phi > maxPhi) orbit.phi = maxPhi;
+      updateCameraOrbit();
+    }
+    function onPointerUp() {
+      orbit.isDragging = false;
+    }
+
     function animate() {
       requestAnimationFrame(animate);
       updateExcavator();
       updateMission();
 
-      // 파티클
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
         p.life -= 0.02;
@@ -1382,36 +1428,33 @@
         }
       }
 
-      // 카메라 따라가기
-      if (excavator.group) {
-        const current = excavator.group.position.clone();
-        const delta = current.clone().sub(lastExcavatorPos);
-        camera.position.add(delta);
-        controls.target.copy(current);
-        controls.target.y += 1.5;
-        lastExcavatorPos.copy(current);
-      }
+      orbit.target.set(
+        excavator.group.position.x,
+        excavator.group.position.y + 1.5,
+        excavator.group.position.z
+      );
+      updateCameraOrbit();
 
-      controls.update();
       renderer.render(scene, camera);
     }
 
     function init() {
       if (typeof THREE === "undefined") {
-        alert("three.js 로딩에 실패했습니다. \n광고 차단/네트워크를 한번 확인해 주세요.");
+        alert(
+          "three.js 로딩에 실패했습니다.\n광고 차단이나 네트워크(https://cdn.jsdelivr.net)를 확인해 주세요."
+        );
         return;
       }
 
       const container = document.getElementById("canvas-container");
-      const w = container.clientWidth;
-      const h = container.clientHeight;
+      const w = container.clientWidth || window.innerWidth;
+      const h = container.clientHeight || window.innerHeight;
 
       scene = new THREE.Scene();
       scene.background = new THREE.Color(0x87ceeb);
       scene.fog = new THREE.Fog(0x87ceeb, 20, 150);
 
       camera = new THREE.PerspectiveCamera(55, w / h, 0.1, 500);
-      camera.position.set(15, 12, 15);
 
       renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(w, h);
@@ -1419,13 +1462,6 @@
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       container.appendChild(renderer.domElement);
-
-      controls = new THREE.OrbitControls(camera, renderer.domElement);
-      controls.enableDamping = true;
-      controls.dampingFactor = 0.05;
-      controls.minDistance = 5;
-      controls.maxDistance = 60;
-      controls.target.set(0, 1.5, 0);
 
       const amb = new THREE.HemisphereLight(0xffffff, 0x555555, 0.7);
       scene.add(amb);
@@ -1444,20 +1480,38 @@
       renderer.domElement.addEventListener("click", onCanvasClick);
       renderer.domElement.addEventListener("touchend", onCanvasClickTouch);
 
+      renderer.domElement.addEventListener("mousedown", onPointerDown);
+      window.addEventListener("mousemove", onPointerMove);
+      window.addEventListener("mouseup", onPointerUp);
+      renderer.domElement.addEventListener("touchstart", onPointerDown, {
+        passive: false,
+      });
+      window.addEventListener("touchmove", onPointerMove, { passive: false });
+      window.addEventListener("touchend", onPointerUp);
+
       createTerrain();
       createEnvironment();
       buildExcavator();
       setupInput();
       setupUI();
 
-      lastExcavatorPos.copy(excavator.group.position);
+      orbit.radius = 20;
+      orbit.theta = Math.PI / 4;
+      orbit.phi = Math.PI / 4;
+      orbit.target.set(
+        excavator.group.position.x,
+        excavator.group.position.y + 1.5,
+        excavator.group.position.z
+      );
+      updateCameraOrbit();
 
       window.addEventListener("resize", () => {
-        const w = container.clientWidth;
-        const h = container.clientHeight;
+        const w = container.clientWidth || window.innerWidth;
+        const h = container.clientHeight || window.innerHeight;
         renderer.setSize(w, h);
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
+        updateCameraOrbit();
       });
 
       animate();
