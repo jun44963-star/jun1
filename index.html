@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>REAL EXCAVATOR V48 LITE</title>
+  <title>REAL EXCAVATOR V48 LITE - Terrain Dig</title>
   <meta
     name="viewport"
     content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"
@@ -10,18 +10,22 @@
   <style>
     body {
       margin: 0;
-      background: #050505;
-      overflow: hidden;
       font-family: "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont,
         sans-serif;
+      background: #000;
     }
+
+    /* 전체 게임 래퍼 (iframe 안에서만 꽉 채우는 용도) */
     #excavator-wrapper {
       position: relative;
-      width: 100vw;
+      width: 100%;
       height: 100vh;
+      max-height: 720px;
       background: #050505;
       overflow: hidden;
+      box-sizing: border-box;
     }
+
     #canvas-container {
       position: absolute;
       inset: 0;
@@ -76,7 +80,7 @@
       box-shadow: 0 0 8px rgba(255, 215, 0, 0.7);
     }
 
-    /* 상단 왼쪽 버튼들 */
+    /* 상단 좌측 버튼들 */
     #top-left-buttons {
       position: absolute;
       top: 10px;
@@ -103,10 +107,10 @@
       color: #000;
     }
 
-    /* 미션 박스 */
+    /* 미션 박스 (조금 아래로 내림) */
     #mission-box {
       position: absolute;
-      top: 10px;
+      top: 60px; /* 기존보다 아래로 */
       left: 50%;
       transform: translateX(-50%);
       background: rgba(0, 0, 0, 0.7);
@@ -217,34 +221,12 @@
       margin-top: 4px;
     }
 
-    /* 하단 크레딧 */
-    #credit-box {
-      position: absolute;
-      left: 10px;
-      bottom: 10px;
-      pointer-events: auto;
-      font-size: 0.7rem;
-      background: rgba(0, 0, 0, 0.7);
-      padding: 4px 8px;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      color: #ddd;
-      z-index: 4;
-    }
-    #credit-box a {
-      color: #ffd700;
-      text-decoration: none;
-    }
-    #credit-box a:hover {
-      text-decoration: underline;
-    }
-
-    /* 모바일 컨트롤러 */
+    /* 모바일 컨트롤러 – 살짝 위로 */
     #controls-container {
       position: absolute;
       left: 0;
       right: 0;
-      bottom: 0;
+      bottom: 20px; /* bottom: 0; 에서 위로 20px 올림 */
       padding: 8px 10px;
       display: flex;
       justify-content: space-between;
@@ -366,19 +348,6 @@
           <li><span class="key">방향키</span> : 주행</li>
           <li class="tip">💡 마우스로 화면을 돌려보세요!</li>
         </ul>
-      </div>
-
-      <div id="credit-box">
-        만든이:
-        <a
-          href="https://hjkim20089.tistory.com/"
-          target="_blank"
-          rel="noopener noreferrer"
-          >hjkim20089.tistory.com</a
-        >
-        &nbsp;|&nbsp;
-        
-    
       </div>
 
       <div id="controls-container">
@@ -576,6 +545,12 @@
     // 컴넷하우스 클릭용
     let raycaster, mouse;
 
+    // 지면(변형 가능)
+    let groundMesh = null;
+    let groundPositions = null;
+    let GROUND_SIZE = 60;
+    let GROUND_SEG = 80;
+
     function updateCameraOrbit() {
       const r = orbit.radius;
       const t = orbit.theta;
@@ -593,15 +568,45 @@
 
     /* ================== 지형/환경 ================== */
     function createGround() {
-      const groundGeo = new THREE.PlaneGeometry(100, 100);
+      const groundGeo = new THREE.PlaneGeometry(
+        GROUND_SIZE,
+        GROUND_SIZE,
+        GROUND_SEG,
+        GROUND_SEG
+      );
       groundGeo.rotateX(-Math.PI / 2);
       const groundMat = new THREE.MeshStandardMaterial({
         color: 0x8d6e63,
         roughness: 0.9,
       });
-      const ground = new THREE.Mesh(groundGeo, groundMat);
-      ground.receiveShadow = true;
-      scene.add(ground);
+      groundMesh = new THREE.Mesh(groundGeo, groundMat);
+      groundMesh.receiveShadow = true;
+      scene.add(groundMesh);
+      groundPositions = groundGeo.attributes.position;
+    }
+
+    function deformGround(worldPos, delta) {
+      if (!groundMesh || !groundPositions) return;
+      const local = groundMesh.worldToLocal(worldPos.clone());
+      const radius = 1.2;
+      const temp = new THREE.Vector3();
+      const count = groundPositions.count;
+
+      for (let i = 0; i < count; i++) {
+        temp.fromBufferAttribute(groundPositions, i);
+        const dx = temp.x - local.x;
+        const dz = temp.z - local.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        if (dist < radius) {
+          const factor = 1 - dist / radius;
+          let newY = temp.y + delta * factor;
+          // 너무 깊거나 높지 않게 제한
+          newY = THREE.MathUtils.clamp(newY, -1.0, 1.0);
+          groundPositions.setY(i, newY);
+        }
+      }
+      groundPositions.needsUpdate = true;
+      groundMesh.geometry.computeVertexNormals();
     }
 
     function createEnvironment() {
@@ -854,7 +859,7 @@
     }
 
     function updateExcavator() {
-      // 주행 (평지)
+      // 주행
       if (Math.abs(inputs.fwd) > 0.1 || Math.abs(inputs.turn) > 0.1) {
         const spd = inputs.fwd * SPEED.move;
         const rot = inputs.turn * SPEED.turn;
@@ -864,7 +869,7 @@
         excavator.group.position.z -=
           Math.sin(excavator.group.rotation.y) * spd;
       }
-      // 높이 고정 (바닥에 안박히게)
+      // 높이 고정 (땅 속에 안 파묻히게)
       excavator.group.position.y = 0;
 
       // 상부 회전
@@ -875,7 +880,7 @@
       if (inputs.arm) excavator.armAng += inputs.arm * SPEED.joint;
       if (inputs.bucket) excavator.bucketAng += inputs.bucket * SPEED.joint;
 
-      // 각도 제한 (버킷 약 100도 정도)
+      // 각도 제한 (버킷 약 100도 느낌)
       excavator.boomAng = THREE.MathUtils.clamp(
         excavator.boomAng,
         -0.1,
@@ -900,14 +905,14 @@
       const tipWorld = new THREE.Vector3();
       excavator.bucketTip.getWorldPosition(tipWorld);
 
-      // 지면(0) 근처에서 땅파기 판정
-      const groundY = 0;
-      const touching = tipWorld.y <= groundY + 0.15;
-
+      // 지면(0 근처) 터치 판정
+      const touching = tipWorld.y <= 0.15;
       if (touching && inputs.bucket > 0) {
+        // 땅 파기
         gameState.hasDug = true;
         if (gameState.dirtLoad < 1) {
           gameState.dirtLoad += 0.005;
+          deformGround(tipWorld, -0.03); // 땅 살짝 파기
           soundMgr.playDig();
           spawnParticle(tipWorld, "dust");
         }
@@ -917,6 +922,7 @@
       if (inputs.bucket < 0 && gameState.dirtLoad > 0) {
         gameState.hasDumped = true;
         gameState.dirtLoad -= 0.01;
+        deformGround(tipWorld, 0.04); // 땅 위로 흙 쌓기
         spawnParticle(tipWorld, "dirt");
       }
 
@@ -967,6 +973,7 @@
         excavator.dirtVolume.visible = false;
       }
 
+      // 지형 되돌리기는 간단 버전에서는 생략 (계속 작업 흔적 남기는 재미)
       particles.forEach((p) => scene.remove(p.mesh));
       particles.length = 0;
 
@@ -1084,25 +1091,36 @@
         });
       }
 
+      // 공유 버튼 (모바일/인앱에서도 무조건 뭔가 뜨게)
       const shareBtn = document.getElementById("share-btn");
       if (shareBtn) {
         shareBtn.addEventListener("click", async () => {
           const url = window.location.href;
           const title = "REAL EXCAVATOR V48 LITE";
           const text = "REAL EXCAVATOR V48 LITE - 포크레인 시뮬레이터";
+
+          async function fallbackShare() {
+            if (navigator.clipboard && window.isSecureContext) {
+              try {
+                await navigator.clipboard.writeText(url);
+                alert("현재 페이지 주소를 클립보드에 복사했습니다.");
+                return;
+              } catch (e) {
+                // 실패하면 프롬프트
+              }
+            }
+            prompt("이 주소를 복사해서 공유해 주세요:", url);
+          }
+
           if (navigator.share) {
             try {
               await navigator.share({ title, text, url });
-            } catch (e) {}
-          } else if (navigator.clipboard) {
-            try {
-              await navigator.clipboard.writeText(url);
-              alert("현재 페이지 주소를 클립보드에 복사했습니다.");
             } catch (e) {
-              alert("이 주소를 복사해서 공유해 주세요:\n" + url);
+              // 인앱/iframe에서 막힌 경우 등 → fallback
+              await fallbackShare();
             }
           } else {
-            prompt("이 주소를 복사해서 공유해 주세요:", url);
+            await fallbackShare();
           }
         });
       }
@@ -1202,8 +1220,9 @@
       }
 
       const container = document.getElementById("canvas-container");
-      const w = container.clientWidth || window.innerWidth;
-      const h = container.clientHeight || window.innerHeight;
+      const parent = document.getElementById("excavator-wrapper");
+      const w = parent.clientWidth || window.innerWidth;
+      const h = parent.clientHeight || window.innerHeight;
 
       scene = new THREE.Scene();
       scene.background = new THREE.Color(0x87ceeb);
@@ -1261,8 +1280,9 @@
       updateCameraOrbit();
 
       window.addEventListener("resize", () => {
-        const w = container.clientWidth || window.innerWidth;
-        const h = container.clientHeight || window.innerHeight;
+        const parent = document.getElementById("excavator-wrapper");
+        const w = parent.clientWidth || window.innerWidth;
+        const h = parent.clientHeight || window.innerHeight;
         renderer.setSize(w, h);
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
@@ -1283,4 +1303,3 @@
   </script>
 </body>
 </html>
-
