@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>REAL EXCAVATOR V48 PRO - AI Multi</title>
+  <title>REAL EXCAVATOR V48 PRO - AI Rumble</title>
   <meta
     name="viewport"
     content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"
@@ -312,8 +312,8 @@
       <h1>REAL EXCAVATOR V48 PRO</h1>
       <p>
         PC: 방향키(이동), WASD(붐/암), F/R(버킷)<br>
-        <span style="color:#ff6666; font-weight:bold;">빨간색 AI 포크레인이 함께 작업합니다!</span><br>
-        언덕을 만나면 계속 전진하여 밀어내세요 (Dozing)
+        <span style="color:#ff6666; font-weight:bold;">AI 2대(빨강/파랑)가 합류했습니다!</span><br>
+        모든 포크레인에 컴넷하우스 로고가 부착되었습니다.
       </p>
       <button id="start-btn" type="button">작업 시작</button>
     </div>
@@ -490,17 +490,8 @@
       startPos: new THREE.Vector3(0,0,0) // Player start
     };
 
-    // AI Excavator
-    const aiExcavator = {
-      group: null, body: null, boom: null, arm: null, bucket: null,
-      bucketTip: null, dirtVolume: null,
-      boomAng: 0.5, armAng: -2.0, bucketAng: 0.5,
-      // AI States
-      state: 'IDLE', // IDLE, MOVE, DIG, DUMP
-      timer: 0,
-      targetPos: new THREE.Vector3(10, 0, 10),
-      startPos: new THREE.Vector3(-10, 0, -10)
-    };
+    // AI Excavators Array
+    const aiExcavators = [];
 
     const inputs = { fwd:0, turn:0, rot:0, boom:0, arm:0, bucket:0 };
     const SPEED = { move: 0.1, turn: 0.02, joint: 0.025 };
@@ -516,7 +507,7 @@
     const missions = [
       { id:1, text:"F 키를 눌러 흙을 가득 파보세요!", check:()=>gameState.hasDug && gameState.dirtLoad > 1.5, completed:false },
       { id:2, text:"R 키를 눌러 흙을 옆에 버리세요!", check:()=>gameState.hasDumped && gameState.dirtLoad < 0.1, completed:false },
-      { id:3, text:"자유 작업 모드 (빨간 포크레인과 함께)", check:()=>false, completed:false }
+      { id:3, text:"자유 작업 모드 (AI와 함께)", check:()=>false, completed:false }
     ];
     let missionIdx = 0;
 
@@ -553,10 +544,15 @@
       scene.add(dirLight);
 
       createGround();
-      // Player (Yellow)
+      
+      // 1. Player (Yellow)
       buildExcavatorModel(excavator, 0xffb300, new THREE.Vector3(0,0,0));
-      // AI (Red)
-      buildExcavatorModel(aiExcavator, 0xdd2222, aiExcavator.startPos);
+      
+      // 2. AI Red
+      createAIExcavator(0xdd2222, new THREE.Vector3(-10, 0, -10));
+      
+      // 3. AI Blue
+      createAIExcavator(0x2244dd, new THREE.Vector3(10, 0, 10));
       
       createEnvironment();
       setupEvents();
@@ -564,6 +560,19 @@
 
       updateCamera();
       animate();
+    }
+
+    function createAIExcavator(color, pos) {
+      const ai = {
+        group: null, body: null, boom: null, arm: null, bucket: null,
+        bucketTip: null, dirtVolume: null, cnhPlate: null,
+        boomAng: 0.5, armAng: -2.0, bucketAng: 0.5,
+        state: 'IDLE', timer: Math.random() * 100, // Random offset
+        targetPos: new THREE.Vector3(pos.x, 0, pos.z),
+        startPos: pos.clone()
+      };
+      buildExcavatorModel(ai, color, pos);
+      aiExcavators.push(ai);
     }
 
     function createGround() {
@@ -609,7 +618,6 @@
       scene.add(groundMesh);
     }
 
-    // Generic Builder for multiple Excavators
     function buildExcavatorModel(targetObj, colorHex, startPos) {
       const mBody = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.2, metalness: 0.3 });
       const mDark = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
@@ -651,7 +659,6 @@
       deck.castShadow = true;
       targetObj.body.add(deck);
 
-      // Cab
       const cabGroup = new THREE.Group();
       cabGroup.position.set(0.5, 1.4, 0.8);
       targetObj.body.add(cabGroup);
@@ -660,14 +667,12 @@
       const winF = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.2, 1.0), mGlass); winF.position.x = 0.6;
       cabGroup.add(winF);
 
-      // CNH Plate (Only for player for now, or both)
-      if(colorHex === 0xffb300) {
-        const cTex = createCnhTexture();
-        const cMat = new THREE.MeshBasicMaterial({ map: cTex, side: THREE.DoubleSide });
-        targetObj.cnhPlate = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 0.8), cMat);
-        targetObj.cnhPlate.position.set(-0.2, 2.5, 0);
-        targetObj.body.add(targetObj.cnhPlate);
-      }
+      // CNH Plate (For All)
+      const cTex = createCnhTexture();
+      const cMat = new THREE.MeshBasicMaterial({ map: cTex, side: THREE.DoubleSide });
+      targetObj.cnhPlate = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 0.8), cMat);
+      targetObj.cnhPlate.position.set(-0.2, 2.5, 0);
+      targetObj.body.add(targetObj.cnhPlate);
 
       targetObj.boom = new THREE.Group();
       targetObj.boom.position.set(1.2, 0.8, -0.5);
@@ -760,11 +765,14 @@
       gameState.dirtLoad = 0;
       if(excavator.dirtVolume) excavator.dirtVolume.scale.set(0,0,0);
 
-      // Reset AI
-      aiExcavator.group.position.copy(aiExcavator.startPos);
-      aiExcavator.group.rotation.set(0,0,0);
-      aiExcavator.body.rotation.set(0,0,0);
-      aiExcavator.state = 'IDLE'; aiExcavator.timer = 0;
+      // Reset AIs
+      aiExcavators.forEach(ai => {
+        ai.group.position.copy(ai.startPos);
+        ai.group.rotation.set(0,0,0);
+        ai.body.rotation.set(0,0,0);
+        ai.state = 'IDLE'; ai.timer = Math.random()*100;
+        if(ai.dirtVolume) ai.dirtVolume.scale.set(0,0,0);
+      });
       
       if(groundMesh && initialGroundPositions) {
         const pos = groundMesh.geometry.attributes.position;
@@ -777,7 +785,7 @@
         r.velocity.set(0,0,0);
         r.mesh.rotation.set(0,0,0);
       });
-      showToast("게임 및 AI가 초기화되었습니다.");
+      showToast("모든 유닛이 초기화되었습니다.");
     }
 
     function updateRockPhysics() {
@@ -820,115 +828,133 @@
 
     // AI Logic Loop
     function updateAI() {
-      if(!aiExcavator.group) return;
-      
-      const ai = aiExcavator;
-      ai.timer++;
+      aiExcavators.forEach(ai => {
+        if(!ai.group) return;
+        ai.timer++;
 
-      // Simple Ground Following for AI
-      const down = new THREE.Vector3(0,-1,0);
-      const origin = ai.group.position.clone(); origin.y = 50;
-      downRay.set(origin, down);
-      const hits = downRay.intersectObject(groundMesh);
-      if(hits.length > 0) {
-        ai.group.position.y += (hits[0].point.y - ai.group.position.y) * 0.2;
-      }
+        // Simple Ground Following
+        const down = new THREE.Vector3(0,-1,0);
+        const origin = ai.group.position.clone(); origin.y = 50;
+        downRay.set(origin, down);
+        const hits = downRay.intersectObject(groundMesh);
+        if(hits.length > 0) {
+          ai.group.position.y += (hits[0].point.y - ai.group.position.y) * 0.2;
+        }
 
-      // State Machine
-      switch(ai.state) {
-        case 'IDLE':
-          if(ai.timer > 60) {
-            // Pick random target
-            const angle = Math.random() * Math.PI * 2;
-            const dist = 5 + Math.random() * 15;
-            ai.targetPos.set(Math.cos(angle)*dist, 0, Math.sin(angle)*dist);
-            ai.state = 'MOVE';
-            ai.timer = 0;
-          }
-          break;
-          
-        case 'MOVE':
-          const dx = ai.targetPos.x - ai.group.position.x;
-          const dz = ai.targetPos.z - ai.group.position.z;
-          const distToTarget = Math.sqrt(dx*dx + dz*dz);
-          
-          if(distToTarget < 2.0) {
-            ai.state = 'DIG'; ai.timer = 0;
-          } else {
-            // Rotate towards target
-            const targetRot = Math.atan2(-dz, dx); // Simple heading
-            // Smooth rotation
-            let rotDiff = targetRot - ai.group.rotation.y;
-            while(rotDiff > Math.PI) rotDiff -= Math.PI*2;
-            while(rotDiff < -Math.PI) rotDiff += Math.PI*2;
-            ai.group.rotation.y += rotDiff * 0.05;
+        // State Machine
+        switch(ai.state) {
+          case 'IDLE':
+            if(ai.timer > 60) {
+              const angle = Math.random() * Math.PI * 2;
+              const dist = 5 + Math.random() * 15;
+              ai.targetPos.set(Math.cos(angle)*dist, 0, Math.sin(angle)*dist);
+              ai.state = 'MOVE';
+              ai.timer = 0;
+            }
+            break;
             
-            // Move forward
-            const speed = 0.06;
-            ai.group.position.x += Math.cos(-ai.group.rotation.y) * speed;
-            ai.group.position.z += Math.sin(-ai.group.rotation.y) * speed;
+          case 'MOVE':
+            const dx = ai.targetPos.x - ai.group.position.x;
+            const dz = ai.targetPos.z - ai.group.position.z;
+            const distToTarget = Math.sqrt(dx*dx + dz*dz);
             
-            // Dozing effect for AI too
-            if(hits.length > 0 && hits[0].point.y > ai.group.position.y + 0.5) {
-               deformGround(hits[0].point, -0.1);
-               spawnDust(hits[0].point);
+            if(distToTarget < 2.0) {
+              ai.state = 'DIG'; ai.timer = 0;
+            } else {
+              const targetRot = Math.atan2(-dz, dx);
+              let rotDiff = targetRot - ai.group.rotation.y;
+              while(rotDiff > Math.PI) rotDiff -= Math.PI*2;
+              while(rotDiff < -Math.PI) rotDiff += Math.PI*2;
+              ai.group.rotation.y += rotDiff * 0.05;
+              
+              const speed = 0.06;
+              ai.group.position.x += Math.cos(-ai.group.rotation.y) * speed;
+              ai.group.position.z += Math.sin(-ai.group.rotation.y) * speed;
+              
+              // Dozing effect
+              if(hits.length > 0 && hits[0].point.y > ai.group.position.y + 0.5) {
+                 deformGround(hits[0].point, -0.1);
+                 spawnDust(hits[0].point);
+              }
             }
-          }
-          break;
+            break;
+            
+          case 'DIG':
+            if(ai.timer < 50) {
+              ai.boomAng = THREE.MathUtils.lerp(ai.boomAng, 1.2, 0.05);
+              ai.armAng = THREE.MathUtils.lerp(ai.armAng, -2.0, 0.05);
+              ai.bucketAng = THREE.MathUtils.lerp(ai.bucketAng, -0.5, 0.05);
+            } else if (ai.timer < 100) {
+              ai.boomAng = THREE.MathUtils.lerp(ai.boomAng, 0.2, 0.05);
+              ai.armAng = THREE.MathUtils.lerp(ai.armAng, -1.0, 0.05);
+            } else if (ai.timer < 150) {
+              ai.bucketAng = THREE.MathUtils.lerp(ai.bucketAng, 1.2, 0.1);
+              if(Math.floor(ai.timer) === 120) {
+                 const tip = new THREE.Vector3();
+                 ai.bucketTip.getWorldPosition(tip);
+                 deformGround(tip, -0.2);
+                 spawnDust(tip);
+                 ai.dirtVolume.scale.set(1,1,1);
+              }
+            } else {
+              ai.state = 'DUMP'; ai.timer = 0;
+            }
+            break;
+            
+          case 'DUMP':
+            if(ai.timer < 60) {
+              ai.boomAng = THREE.MathUtils.lerp(ai.boomAng, 1.0, 0.05);
+              ai.armAng = THREE.MathUtils.lerp(ai.armAng, -1.5, 0.05);
+              ai.body.rotation.y += 0.02; 
+            } else if (ai.timer < 100) {
+              ai.bucketAng = THREE.MathUtils.lerp(ai.bucketAng, -0.5, 0.1);
+              if(Math.floor(ai.timer) === 80) {
+                 ai.dirtVolume.scale.set(0,0,0);
+                 const tip = new THREE.Vector3();
+                 ai.bucketTip.getWorldPosition(tip);
+                 spawnDust(tip);
+                 deformGround(tip, 0.3);
+              }
+            } else {
+              ai.state = 'IDLE'; ai.timer = 0;
+            }
+            break;
+        }
+        
+        // Update Joint Meshes
+        ai.boom.rotation.x = ai.boomAng;
+        ai.arm.rotation.x = ai.armAng;
+        ai.bucket.rotation.x = ai.bucketAng;
+      });
+    }
+
+    function resolveExcavatorCollisions() {
+      // List of all units
+      const units = [excavator, ...aiExcavators];
+      const radius = 2.5; // Bounds radius
+
+      for(let i=0; i<units.length; i++) {
+        for(let j=i+1; j<units.length; j++) {
+          const u1 = units[i];
+          const u2 = units[j];
           
-        case 'DIG':
-          // Animation sequence
-          if(ai.timer < 50) {
-            // Prepare
-            ai.boomAng = THREE.MathUtils.lerp(ai.boomAng, 1.2, 0.05);
-            ai.armAng = THREE.MathUtils.lerp(ai.armAng, -2.0, 0.05);
-            ai.bucketAng = THREE.MathUtils.lerp(ai.bucketAng, -0.5, 0.05);
-          } else if (ai.timer < 100) {
-            // Dig down
-            ai.boomAng = THREE.MathUtils.lerp(ai.boomAng, 0.2, 0.05);
-            ai.armAng = THREE.MathUtils.lerp(ai.armAng, -1.0, 0.05);
-          } else if (ai.timer < 150) {
-            // Scoop
-            ai.bucketAng = THREE.MathUtils.lerp(ai.bucketAng, 1.2, 0.1);
-            if(ai.timer === 120) {
-               // Effect
-               const tip = new THREE.Vector3();
-               ai.bucketTip.getWorldPosition(tip);
-               deformGround(tip, -0.2);
-               spawnDust(tip);
-               ai.dirtVolume.scale.set(1,1,1); // Show dirt
-            }
-          } else {
-            ai.state = 'DUMP'; ai.timer = 0;
-          }
-          break;
+          const dx = u1.group.position.x - u2.group.position.x;
+          const dz = u1.group.position.z - u2.group.position.z;
+          const dist = Math.sqrt(dx*dx + dz*dz);
           
-        case 'DUMP':
-          if(ai.timer < 60) {
-            // Lift and rotate body
-            ai.boomAng = THREE.MathUtils.lerp(ai.boomAng, 1.0, 0.05);
-            ai.armAng = THREE.MathUtils.lerp(ai.armAng, -1.5, 0.05);
-            ai.body.rotation.y += 0.02; 
-          } else if (ai.timer < 100) {
-            // Dump
-            ai.bucketAng = THREE.MathUtils.lerp(ai.bucketAng, -0.5, 0.1);
-            if(ai.timer === 80) {
-               ai.dirtVolume.scale.set(0,0,0);
-               const tip = new THREE.Vector3();
-               ai.bucketTip.getWorldPosition(tip);
-               spawnDust(tip);
-               deformGround(tip, 0.3); // Mound
-            }
-          } else {
-            ai.state = 'IDLE'; ai.timer = 0;
+          if(dist < radius * 2) {
+            // Push apart
+            const overlap = (radius * 2) - dist;
+            const pushX = (dx / dist) * overlap * 0.5;
+            const pushZ = (dz / dist) * overlap * 0.5;
+            
+            u1.group.position.x += pushX;
+            u1.group.position.z += pushZ;
+            u2.group.position.x -= pushX;
+            u2.group.position.z -= pushZ;
           }
-          break;
+        }
       }
-      
-      // Update AI Joint Meshes
-      ai.boom.rotation.x = ai.boomAng;
-      ai.arm.rotation.x = ai.armAng;
-      ai.bucket.rotation.x = ai.bucketAng;
     }
 
     function updatePhysics() {
@@ -1033,6 +1059,7 @@
 
       // 5. Physics Update
       updateRockPhysics();
+      resolveExcavatorCollisions();
       updateAI();
     }
 
@@ -1115,7 +1142,13 @@
       updatePhysics();
       updateParticles();
       updateCamera();
+      
+      // Update ALL plates
       if(excavator.cnhPlate) excavator.cnhPlate.lookAt(camera.position);
+      aiExcavators.forEach(ai => {
+        if(ai.cnhPlate) ai.cnhPlate.lookAt(camera.position);
+      });
+
       renderer.render(scene, camera);
     }
 
