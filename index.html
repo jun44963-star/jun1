@@ -1149,12 +1149,29 @@
 
     function setupUI() {
       const startBtn = document.getElementById("start-btn");
-      if (startBtn) {
-        startBtn.addEventListener("click", () => {
-          const ov = document.getElementById("start-overlay");
-          if (ov) ov.style.display = "none";
-          soundMgr.init();
-        });
+if (startBtn) {
+  const startGame = () => {
+    const ov = document.getElementById("start-overlay");
+    if (ov) ov.style.display = "none";
+    soundMgr.init();
+  };
+
+  // PC / 데스크탑용
+  startBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    startGame();
+  });
+
+  // 📱 모바일(티스토리 앱/브라우저)용 – 터치 제스처 직접 처리
+  startBtn.addEventListener(
+    "touchstart",
+    (e) => {
+      e.preventDefault(); // 클릭으로 변환되는 걸 기다리지 말고 바로 실행
+      startGame();
+    },
+    { passive: false }
+  );
+
       }
 
       const resetBtn = document.getElementById("reset-btn");
@@ -1390,4 +1407,5 @@
   </script>
 </body>
 </html>
+
 
