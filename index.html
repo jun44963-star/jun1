@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>REAL EXCAVATOR V48</title>
+  <title>REAL EXCAVATOR V48 LITE</title>
   <meta
     name="viewport"
     content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"
@@ -309,13 +309,13 @@
     }
   </style>
 
-  <!-- three.js만 사용 (OrbitControls, RoundedBoxGeometry 전부 제거) -->
+  <!-- three.js만 사용 -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 </head>
 <body>
   <div id="excavator-wrapper">
     <div id="start-overlay">
-      <h1>REAL EXCAVATOR V48</h1>
+      <h1>REAL EXCAVATOR V48 LITE</h1>
       <p>
         F: Dig (땅파기) | R: Dump (버리기)<br />Arrows: Move | WASD + QE: Arm
         Control
@@ -430,7 +430,7 @@
   </div>
 
   <script>
-    // ===== 사운드 매니저 =====
+    /* ================== 사운드 ================== */
     class SoundManager {
       constructor() {
         this.ctx = null;
@@ -527,7 +527,7 @@
     }
     const soundMgr = new SoundManager();
 
-    // ===== 전역 상태 =====
+    /* ================== 전역 상태 ================== */
     let scene, camera, renderer;
     const excavator = {
       group: null,
@@ -538,26 +538,16 @@
       dirtVolume: null,
       bucketTip: null,
       cnhPlate: null,
-      boomAng: 0.5,
-      armAng: -2.0,
-      bucketAng: 0.5,
+      boomAng: 0.3,
+      armAng: -1.7,
+      bucketAng: 0.4,
     };
     const inputs = { fwd: 0, turn: 0, rot: 0, boom: 0, arm: 0, bucket: 0 };
-    const SPEED = { move: 0.08, turn: 0.015, joint: 0.01 };
+    const SPEED = { move: 0.12, turn: 0.02, joint: 0.02 };
 
-    const TERRAIN_SIZE = 120;
-    const TERRAIN_RES = 96;
-    let terrainMesh;
-    const terrainData = new Float32Array(
-      (TERRAIN_RES + 1) * (TERRAIN_RES + 1)
-    );
-    let terrainInitHeights = null;
-    let terrainInitColors = null;
-
-    let raycaster, mouse;
     const particles = [];
-
     const gameState = { dirtLoad: 0, hasDug: false, hasDumped: false };
+
     const missions = [
       {
         id: 1,
@@ -576,16 +566,19 @@
     ];
     let currentMissionIdx = 0;
 
-    // 카메라 오비트(직접 구현)
+    // 카메라 오비트
     const orbit = {
       theta: Math.PI / 4,
       phi: Math.PI / 4,
-      radius: 20,
+      radius: 22,
       target: new THREE.Vector3(0, 1.5, 0),
       isDragging: false,
       lastX: 0,
       lastY: 0,
     };
+
+    // 컴넷하우스 클릭용
+    let raycaster, mouse;
 
     function updateCameraOrbit() {
       const r = orbit.radius;
@@ -595,7 +588,6 @@
         st = Math.sin(t);
       const cp = Math.cos(p),
         sp = Math.sin(p);
-
       const x = orbit.target.x + r * sp * ct;
       const y = orbit.target.y + r * cp;
       const z = orbit.target.z + r * sp * st;
@@ -603,125 +595,17 @@
       camera.lookAt(orbit.target);
     }
 
-    function getTerrainHeight(x, z) {
-      const half = TERRAIN_SIZE / 2;
-      let gx = ((x + half) / TERRAIN_SIZE) * TERRAIN_RES;
-      let gz = ((z + half) / TERRAIN_SIZE) * TERRAIN_RES;
-      if (gx < 0 || gx >= TERRAIN_RES || gz < 0 || gz >= TERRAIN_RES) return 0;
-      const x0 = Math.floor(gx),
-        z0 = Math.floor(gz);
-      const x1 = Math.min(x0 + 1, TERRAIN_RES);
-      const z1 = Math.min(z0 + 1, TERRAIN_RES);
-      const tx = gx - x0,
-        tz = gz - z0;
-      const i00 = z0 * (TERRAIN_RES + 1) + x0;
-      const i10 = z0 * (TERRAIN_RES + 1) + x1;
-      const i01 = z1 * (TERRAIN_RES + 1) + x0;
-      const i11 = z1 * (TERRAIN_RES + 1) + x1;
-      const h00 = terrainData[i00],
-        h10 = terrainData[i10],
-        h01 = terrainData[i01],
-        h11 = terrainData[i11];
-      const h0 = h00 * (1 - tx) + h10 * tx;
-      const h1 = h01 * (1 - tx) + h11 * tx;
-      return h0 * (1 - tz) + h1 * tz;
-    }
-
-    function createTerrain() {
-      const geo = new THREE.PlaneGeometry(
-        TERRAIN_SIZE,
-        TERRAIN_SIZE,
-        TERRAIN_RES,
-        TERRAIN_RES
-      );
-      geo.rotateX(-Math.PI / 2);
-      const pos = geo.attributes.position;
-      const count = pos.count;
-      geo.setAttribute(
-        "color",
-        new THREE.BufferAttribute(new Float32Array(count * 3), 3)
-      );
-      const col = geo.attributes.color;
-
-      const baseC = new THREE.Color(0xc2b280);
-      const hillC = new THREE.Color(0x8d6e63);
-
-      for (let i = 0; i < count; i++) {
-        const x = pos.getX(i);
-        const z = pos.getZ(i);
-        let y = Math.sin(x * 0.1) * 0.2 + Math.cos(z * 0.1) * 0.2;
-        const d1 = Math.sqrt((x - 20) ** 2 + (z - 10) ** 2);
-        if (d1 < 25) y += (25 - d1) * 0.25;
-        const d2 = Math.sqrt((x + 20) ** 2 + (z + 20) ** 2);
-        if (d2 < 20) y += (20 - d2) * 0.2;
-        const d3 = Math.sqrt(x * x + (z + 25) ** 2);
-        if (d3 < 20) y += (20 - d3) * 0.3;
-        if (Math.sqrt(x * x + z * z) < 8) y = 0;
-
-        pos.setY(i, y);
-        terrainData[i] = y;
-
-        const t = Math.min(1, Math.max(0, (y - 0.5) / 3));
-        const c = baseC.clone().lerp(hillC, t);
-        col.setXYZ(i, c.r, c.g, c.b);
-      }
-
-      geo.computeVertexNormals();
-      const mat = new THREE.MeshStandardMaterial({
-        vertexColors: true,
-        roughness: 1.0,
+    /* ================== 지형/환경 ================== */
+    function createGround() {
+      const groundGeo = new THREE.PlaneGeometry(100, 100);
+      groundGeo.rotateX(-Math.PI / 2);
+      const groundMat = new THREE.MeshStandardMaterial({
+        color: 0x8d6e63,
+        roughness: 0.9,
       });
-      terrainMesh = new THREE.Mesh(geo, mat);
-      terrainMesh.receiveShadow = true;
-      scene.add(terrainMesh);
-
-      terrainInitHeights = new Float32Array(terrainData.length);
-      terrainInitHeights.set(terrainData);
-      terrainInitColors = new Float32Array(col.array.length);
-      terrainInitColors.set(col.array);
-    }
-
-    function modifyTerrain(x, z, delta) {
-      if (!terrainMesh) return;
-      const posAttr = terrainMesh.geometry.attributes.position;
-      const colAttr = terrainMesh.geometry.attributes.color;
-      const half = TERRAIN_SIZE / 2;
-      const gx = Math.floor(((x + half) / TERRAIN_SIZE) * TERRAIN_RES);
-      const gz = Math.floor(((z + half) / TERRAIN_SIZE) * TERRAIN_RES);
-      const radius = 2;
-      let modified = false;
-
-      for (let i = -radius; i <= radius; i++) {
-        for (let j = -radius; j <= radius; j++) {
-          const xi = gx + i;
-          const zi = gz + j;
-          if (
-            xi < 0 ||
-            xi > TERRAIN_RES ||
-            zi < 0 ||
-            zi > TERRAIN_RES
-          )
-            continue;
-          const dist = Math.sqrt(i * i + j * j);
-          if (dist > radius) continue;
-          const idx = zi * (TERRAIN_RES + 1) + xi;
-          let h = posAttr.getY(idx);
-          const factor = (1 - dist / radius) * delta * 0.5;
-          h += factor;
-          if (delta < 0 && h < -2.5) h = -2.5;
-          if (delta > 0 && h > 8) h = 8;
-          posAttr.setY(idx, h);
-          terrainData[idx] = h;
-          if (delta < 0) colAttr.setXYZ(idx, 0.2, 0.15, 0.1);
-          else colAttr.setXYZ(idx, 0.35, 0.25, 0.2);
-          modified = true;
-        }
-      }
-      if (modified) {
-        posAttr.needsUpdate = true;
-        colAttr.needsUpdate = true;
-        terrainMesh.geometry.computeVertexNormals();
-      }
+      const ground = new THREE.Mesh(groundGeo, groundMat);
+      ground.receiveShadow = true;
+      scene.add(ground);
     }
 
     function createEnvironment() {
@@ -734,7 +618,6 @@
         color: 0xffffff,
         roughness: 0.2,
       });
-
       for (let i = 0; i < 8; i++) {
         const grp = new THREE.Group();
         const base = new THREE.Mesh(coneGeo, coneMat);
@@ -746,26 +629,12 @@
         str.position.y = 0.35;
         grp.add(base, str);
         const a = (i / 8) * Math.PI * 2;
-        const x = Math.cos(a) * 10;
-        const z = Math.sin(a) * 10;
-        grp.position.set(x, getTerrainHeight(x, z), z);
+        const x = Math.cos(a) * 12;
+        const z = Math.sin(a) * 12;
+        grp.position.set(x, 0, z);
         grp.castShadow = true;
         scene.add(grp);
       }
-    }
-
-    function createLogoTexture() {
-      const c = document.createElement("canvas");
-      c.width = 256;
-      c.height = 64;
-      const ctx = c.getContext("2d");
-      ctx.fillStyle = "#FFA500";
-      ctx.fillRect(0, 0, 256, 64);
-      ctx.font = "bold 40px Arial";
-      ctx.fillStyle = "#000";
-      ctx.textAlign = "center";
-      ctx.fillText("HEAVY v48", 128, 45);
-      return new THREE.CanvasTexture(c);
     }
 
     function createCnhTexture() {
@@ -773,6 +642,7 @@
       c.width = 512;
       c.height = 128;
       const ctx = c.getContext("2d");
+      if (!ctx) return null;
       ctx.fillStyle = "#111";
       ctx.fillRect(0, 0, 512, 128);
       ctx.strokeStyle = "#ffd700";
@@ -788,99 +658,73 @@
       return new THREE.CanvasTexture(c);
     }
 
+    /* ================== 포크레인 ================== */
     function buildExcavator() {
-      excavator.group = new THREE.Group();
-      scene.add(excavator.group);
-
-      // 하부 트랙
-      const tracks = new THREE.Group();
-      excavator.group.add(tracks);
-      const trackMat = new THREE.MeshStandardMaterial({
+      const darkMat = new THREE.MeshStandardMaterial({
         color: 0x1a1a1a,
         roughness: 0.7,
       });
-      const buildTrack = (zOff) => {
-        const t = new THREE.Group();
-        t.position.set(0, 0.5, zOff);
-        const frame = new THREE.Mesh(
-          new THREE.BoxGeometry(5.5, 0.8, 0.8),
-          trackMat
-        );
-        t.add(frame);
-        return t;
-      };
-      tracks.add(buildTrack(1.4), buildTrack(-1.4));
-      const center = new THREE.Mesh(
-        new THREE.BoxGeometry(3, 0.4, 2.2),
-        trackMat
-      );
-      center.position.y = 0.6;
-      excavator.group.add(center);
-
-      // 상부 몸통
-      excavator.body = new THREE.Group();
-      excavator.body.position.y = 1.1;
-      excavator.group.add(excavator.body);
-
       const bodyMat = new THREE.MeshStandardMaterial({
         color: 0xffb300,
         roughness: 0.3,
         metalness: 0.3,
       });
+
+      excavator.group = new THREE.Group();
+      scene.add(excavator.group);
+
+      // 트랙
+      const tracks = new THREE.Group();
+      excavator.group.add(tracks);
+      const trackBoxGeo = new THREE.BoxGeometry(5.5, 0.8, 1.0);
+      const t1 = new THREE.Mesh(trackBoxGeo, darkMat);
+      t1.position.set(0, 0.5, 1.4);
+      const t2 = new THREE.Mesh(trackBoxGeo, darkMat);
+      t2.position.set(0, 0.5, -1.4);
+      tracks.add(t1, t2);
+      const center = new THREE.Mesh(
+        new THREE.BoxGeometry(3, 0.4, 2.2),
+        darkMat
+      );
+      center.position.y = 0.7;
+      excavator.group.add(center);
+
+      // 상부
+      excavator.body = new THREE.Group();
+      excavator.body.position.y = 1.4;
+      excavator.group.add(excavator.body);
+
       const deck = new THREE.Mesh(
-        new THREE.BoxGeometry(3.6, 1.2, 3.4),
+        new THREE.BoxGeometry(3.6, 1.0, 3.4),
         bodyMat
       );
-      deck.position.set(-0.4, 0.6, 0);
+      deck.position.set(0, 0.6, 0);
       deck.castShadow = true;
       excavator.body.add(deck);
 
       // 붐
       excavator.boom = new THREE.Group();
-      excavator.boom.position.set(0.8, 1.5, -0.5);
+      excavator.boom.position.set(0.6, 1.0, -0.6);
       excavator.body.add(excavator.boom);
 
       const boomMesh = new THREE.Mesh(
-        new THREE.BoxGeometry(0.8, 6.0, 0.6),
+        new THREE.BoxGeometry(0.7, 4.5, 0.6),
         bodyMat
       );
-      boomMesh.position.set(0, 3.0, 0);
+      boomMesh.position.set(0, 2.25, 0);
       boomMesh.castShadow = true;
       excavator.boom.add(boomMesh);
 
-      const logoTex = createLogoTexture();
-      const logoMat = new THREE.MeshStandardMaterial({
-        map: logoTex,
-        roughness: 0.3,
-      });
-      const lp = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.6, 3),
-        logoMat
-      );
-      lp.position.set(0.41, 3.0, 0);
-      lp.rotation.set(0, Math.PI / 2, -Math.PI / 2);
-      excavator.boom.add(lp);
-
       // 암
       excavator.arm = new THREE.Group();
-      excavator.arm.position.set(0, 5.8, 0);
+      excavator.arm.position.set(0, 4.5, 0);
       excavator.boom.add(excavator.arm);
-
-      const armShape = new THREE.Shape();
-      armShape.moveTo(-0.3, 0.6);
-      armShape.lineTo(0.3, 0.6);
-      armShape.lineTo(0.25, -3.2);
-      armShape.lineTo(-0.25, -3.2);
-      armShape.lineTo(-0.3, 0.6);
-      const armGeo = new THREE.ExtrudeGeometry(armShape, {
-        depth: 0.5,
-        bevelEnabled: true,
-        bevelThickness: 0.03,
-        bevelSize: 0.03,
-        bevelSegments: 3,
-      });
-      const armMesh = new THREE.Mesh(armGeo, bodyMat);
-      armMesh.position.set(0, 0, -0.25);
+      const armMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(0.6, 3.2, 0.5),
+        bodyMat
+      );
+      armMesh.position.set(0, -1.6, 0);
+      armMesh.castShadow = true;
       excavator.arm.add(armMesh);
 
       // 버킷
@@ -888,100 +732,81 @@
       excavator.bucket.position.set(0, -3.2, 0);
       excavator.arm.add(excavator.bucket);
 
-      const bucketGroup = new THREE.Group();
-      bucketGroup.position.set(0, -0.6, 0);
-      bucketGroup.rotation.y = Math.PI / 2;
-      excavator.bucket.add(bucketGroup);
+      const bucketBody = new THREE.Mesh(
+        new THREE.BoxGeometry(1.4, 0.8, 0.8),
+        new THREE.MeshStandardMaterial({
+          color: 0x222222,
+          roughness: 0.8,
+        })
+      );
+      bucketBody.position.set(0.7, -0.3, 0);
+      bucketBody.castShadow = true;
+      excavator.bucket.add(bucketBody);
 
-      const sideShape = new THREE.Shape();
-      sideShape.moveTo(0.85, 0);
-      sideShape.lineTo(0, 0);
-      sideShape.quadraticCurveTo(-0.55, 0, -0.55, 0.6);
-      sideShape.lineTo(-0.55, 0.8);
-      sideShape.lineTo(-0.5, 0.8);
-      sideShape.lineTo(-0.5, 0.6);
-      sideShape.quadraticCurveTo(-0.5, 0.05, 0, 0.05);
-      sideShape.lineTo(0.85, 0.05);
-      sideShape.lineTo(0.85, 0);
-
-      const bw = 0.9;
-      const bucketGeo = new THREE.ExtrudeGeometry(sideShape, {
-        depth: bw,
-        bevelEnabled: false,
-        curveSegments: 12,
-      });
-      const bucketMat = new THREE.MeshStandardMaterial({
-        color: 0x222222,
-        roughness: 0.8,
-      });
-      const bucketMesh = new THREE.Mesh(bucketGeo, bucketMat);
-      bucketMesh.position.set(0, 0, -bw / 2);
-      bucketGroup.add(bucketMesh);
-
-      const toothGeo = new THREE.CylinderGeometry(0, 0.07, 0.45, 4);
+      const toothGeo = new THREE.BoxGeometry(0.2, 0.4, 0.1);
       const toothMat = new THREE.MeshStandardMaterial({
         color: 0x999999,
         roughness: 0.5,
         metalness: 0.7,
       });
-      for (let i = 0; i < 5; i++) {
+      for (let i = -2; i <= 2; i++) {
         const t = new THREE.Mesh(toothGeo, toothMat);
-        t.rotation.set(Math.PI / 4, 0, -Math.PI / 2);
-        t.position.set(
-          1.15,
-          0.03,
-          -bw / 2 + 0.05 + (i * (bw - 0.1)) / 4
-        );
-        bucketGroup.add(t);
+        t.position.set(1.4, -0.7, (i * 0.8) / 4);
+        t.castShadow = true;
+        excavator.bucket.add(t);
       }
 
-      const dirtGeo = new THREE.CylinderGeometry(
-        0.4,
-        0.4,
-        bw,
-        8,
-        1,
-        false,
-        0,
-        Math.PI
-      );
+      // 버킷 안 흙
+      const dirtGeo = new THREE.BoxGeometry(1.1, 0.6, 0.7);
       const dirtMat = new THREE.MeshStandardMaterial({
         color: 0x5d4037,
         roughness: 1.0,
       });
       excavator.dirtVolume = new THREE.Mesh(dirtGeo, dirtMat);
-      excavator.dirtVolume.rotation.x = Math.PI / 2;
-      excavator.dirtVolume.position.set(0.2, 0.3, 0);
-      excavator.dirtVolume.scale.set(0, 0, 1);
-      bucketGroup.add(excavator.dirtVolume);
+      excavator.dirtVolume.position.set(0.8, -0.2, 0);
+      excavator.dirtVolume.scale.set(0, 0, 0);
+      excavator.dirtVolume.castShadow = true;
+      excavator.bucket.add(excavator.dirtVolume);
 
+      // 버킷 끝 위치용
       excavator.bucketTip = new THREE.Object3D();
-      excavator.bucketTip.position.set(1.2, 0.03, 0);
-      bucketGroup.add(excavator.bucketTip);
+      excavator.bucketTip.position.set(1.5, -0.7, 0);
+      excavator.bucket.add(excavator.bucketTip);
 
-      // 컴넷하우스 판넬 (공중에 떠서 앞뒤에서 보이게)
+      // 컴넷하우스 판넬 (공중에 떠 있게)
       const cTex = createCnhTexture();
-      const cMat = new THREE.MeshStandardMaterial({
-        map: cTex,
-        roughness: 0.4,
-        metalness: 0.2,
-        side: THREE.DoubleSide,
-      });
-      const cnhPlate = new THREE.Mesh(
-        new THREE.PlaneGeometry(2.8, 1.0),
+      const cMat = cTex
+        ? new THREE.MeshStandardMaterial({
+            map: cTex,
+            roughness: 0.4,
+            metalness: 0.2,
+            side: THREE.DoubleSide,
+          })
+        : new THREE.MeshStandardMaterial({
+            color: 0x222222,
+            roughness: 0.7,
+            metalness: 0.1,
+            side: THREE.DoubleSide,
+          });
+      const cnh = new THREE.Mesh(
+        new THREE.PlaneGeometry(3.0, 1.1),
         cMat
       );
-      cnhPlate.position.set(0, 5.0, 0);
-      cnhPlate.castShadow = true;
-      excavator.body.add(cnhPlate);
-      excavator.cnhPlate = cnhPlate;
+      cnh.position.set(0, 4.5, 0);
+      cnh.castShadow = true;
+      excavator.body.add(cnh);
+      excavator.cnhPlate = cnh;
 
       // 초기 각도
       excavator.boom.rotation.x = excavator.boomAng;
       excavator.arm.rotation.x = excavator.armAng;
       excavator.bucket.rotation.x = excavator.bucketAng;
+
+      // 시작 위치
+      excavator.group.position.set(0, 0, 0);
     }
 
+    /* ================== 유틸 ================== */
     function spawnParticle(pos, type) {
       const geo = new THREE.PlaneGeometry(0.3, 0.3);
       const mat =
@@ -1033,7 +858,7 @@
     }
 
     function updateExcavator() {
-      // 주행
+      // 주행 (평지)
       if (Math.abs(inputs.fwd) > 0.1 || Math.abs(inputs.turn) > 0.1) {
         const spd = inputs.fwd * SPEED.move;
         const rot = inputs.turn * SPEED.turn;
@@ -1043,62 +868,13 @@
         excavator.group.position.z -=
           Math.sin(excavator.group.rotation.y) * spd;
       }
-
-      // 언덕에서 기울기 / 땅속 방지
-      (function () {
-        const gx = excavator.group.position.x;
-        const gz = excavator.group.position.z;
-        const yaw = excavator.group.rotation.y;
-        const d = 1.5;
-        const cosY = Math.cos(yaw),
-          sinY = Math.sin(yaw);
-        const centerH = getTerrainHeight(gx, gz);
-        const frontX = gx + cosY * d,
-          frontZ = gz - sinY * d;
-        const backX = gx - cosY * d,
-          backZ = gz + sinY * d;
-        const leftX = gx - sinY * d,
-          leftZ = gz - cosY * d;
-        const rightX = gx + sinY * d,
-          rightZ = gz + cosY * d;
-        const hFront = getTerrainHeight(frontX, frontZ);
-        const hBack = getTerrainHeight(backX, backZ);
-        const hLeft = getTerrainHeight(leftX, leftZ);
-        const hRight = getTerrainHeight(rightX, rightZ);
-        const avg = (centerH + hFront + hBack + hLeft + hRight) / 5;
-        const groundOffset = 0.05;
-        let targetY = avg + groundOffset;
-        let ny = THREE.MathUtils.lerp(
-          excavator.group.position.y,
-          targetY,
-          0.2
-        );
-        if (ny < targetY) ny = targetY;
-        excavator.group.position.y = ny;
-
-        const slopeF = (hFront - hBack) / (2 * d);
-        const slopeS = (hLeft - hRight) / (2 * d);
-        const pitch = Math.atan2(slopeF, 1);
-        const roll = Math.atan2(slopeS, 1);
-        const maxTilt = 0.5;
-        const cp = THREE.MathUtils.clamp(pitch, -maxTilt, maxTilt);
-        const cr = THREE.MathUtils.clamp(roll, -maxTilt, maxTilt);
-        excavator.group.rotation.x = THREE.MathUtils.lerp(
-          excavator.group.rotation.x,
-          cp,
-          0.2
-        );
-        excavator.group.rotation.z = THREE.MathUtils.lerp(
-          excavator.group.rotation.z,
-          cr,
-          0.2
-        );
-      })();
+      // 높이 고정 (바닥에 안박히게)
+      excavator.group.position.y = 0;
 
       // 상부 회전
       if (inputs.rot) excavator.body.rotation.y += inputs.rot * SPEED.turn;
 
-      // 붐/암/버킷 각도
+      // 붐 / 암 / 버킷
       if (inputs.boom) excavator.boomAng += inputs.boom * SPEED.joint;
       if (inputs.arm) excavator.armAng += inputs.arm * SPEED.joint;
       if (inputs.bucket) excavator.bucketAng += inputs.bucket * SPEED.joint;
@@ -1106,13 +882,13 @@
       // 각도 제한 (버킷 약 100도 정도)
       excavator.boomAng = THREE.MathUtils.clamp(
         excavator.boomAng,
-        -0.2,
-        2.0
+        -0.1,
+        1.8
       );
       excavator.armAng = THREE.MathUtils.clamp(
         excavator.armAng,
-        -3.2,
-        -0.2
+        -2.5,
+        -0.1
       );
       excavator.bucketAng = THREE.MathUtils.clamp(
         excavator.bucketAng,
@@ -1127,18 +903,17 @@
       // 버킷 끝 위치
       const tipWorld = new THREE.Vector3();
       excavator.bucketTip.getWorldPosition(tipWorld);
-      const tH = getTerrainHeight(tipWorld.x, tipWorld.z);
 
-      // 땅에 닿은 상태에서 땅파기
-      if (tipWorld.y < tH + 0.15) {
-        if (inputs.bucket > 0) {
-          gameState.hasDug = true;
-          if (gameState.dirtLoad < 1) {
-            gameState.dirtLoad += 0.005;
-            modifyTerrain(tipWorld.x, tipWorld.z, -0.15);
-            soundMgr.playDig();
-            spawnParticle(tipWorld, "dust");
-          }
+      // 지면(0) 근처에서 땅파기 판정
+      const groundY = 0;
+      const touching = tipWorld.y <= groundY + 0.15;
+
+      if (touching && inputs.bucket > 0) {
+        gameState.hasDug = true;
+        if (gameState.dirtLoad < 1) {
+          gameState.dirtLoad += 0.005;
+          soundMgr.playDig();
+          spawnParticle(tipWorld, "dust");
         }
       }
 
@@ -1146,14 +921,13 @@
       if (inputs.bucket < 0 && gameState.dirtLoad > 0) {
         gameState.hasDumped = true;
         gameState.dirtLoad -= 0.01;
-        modifyTerrain(tipWorld.x, tipWorld.z, 0.2);
         spawnParticle(tipWorld, "dirt");
       }
 
       // 버킷 안 흙
       if (excavator.dirtVolume) {
         const s = gameState.dirtLoad;
-        excavator.dirtVolume.scale.set(s, s, 1);
+        excavator.dirtVolume.scale.set(s, s, s);
         excavator.dirtVolume.visible = s > 0.05;
       }
 
@@ -1161,9 +935,8 @@
       const fill = document.getElementById("load-fill");
       if (fill) fill.style.height = gameState.dirtLoad * 100 + "%";
 
-      // 엔진 사운드
       const active = Object.values(inputs).some((v) => v !== 0);
-      soundMgr.setRPM(active, false);
+      soundMgr.setRPM(active, touching && inputs.bucket > 0);
     }
 
     function resetGame() {
@@ -1183,43 +956,25 @@
       if (t1) t1.innerText = "MISSION 1";
       if (t2) t2.innerText = missions[0].text;
 
-      if (terrainMesh && terrainInitHeights && terrainInitColors) {
-        const pos = terrainMesh.geometry.attributes.position;
-        const col = terrainMesh.geometry.attributes.color;
-        const count = pos.count;
-        for (let i = 0; i < count; i++) {
-          const h = terrainInitHeights[i];
-          pos.setY(i, h);
-          terrainData[i] = h;
-          const r = terrainInitColors[i * 3];
-          const g = terrainInitColors[i * 3 + 1];
-          const b = terrainInitColors[i * 3 + 2];
-          col.setXYZ(i, r, g, b);
-        }
-        pos.needsUpdate = true;
-        col.needsUpdate = true;
-        terrainMesh.geometry.computeVertexNormals();
-      }
-
-      excavator.group.position.set(0, 0.1, 0);
+      excavator.group.position.set(0, 0, 0);
       excavator.group.rotation.set(0, 0, 0);
       excavator.body.rotation.set(0, 0, 0);
-      excavator.boomAng = 0.5;
-      excavator.armAng = -2.0;
-      excavator.bucketAng = 0.5;
+      excavator.boomAng = 0.3;
+      excavator.armAng = -1.7;
+      excavator.bucketAng = 0.4;
       excavator.boom.rotation.x = excavator.boomAng;
       excavator.arm.rotation.x = excavator.armAng;
       excavator.bucket.rotation.x = excavator.bucketAng;
 
       if (excavator.dirtVolume) {
-        excavator.dirtVolume.scale.set(0, 0, 1);
+        excavator.dirtVolume.scale.set(0, 0, 0);
         excavator.dirtVolume.visible = false;
       }
 
       particles.forEach((p) => scene.remove(p.mesh));
       particles.length = 0;
 
-      orbit.radius = 20;
+      orbit.radius = 22;
       orbit.theta = Math.PI / 4;
       orbit.phi = Math.PI / 4;
       orbit.target.set(
@@ -1230,6 +985,7 @@
       updateCameraOrbit();
     }
 
+    /* ================== 입력/UI ================== */
     function setupInput() {
       const onKey = (e, v) => {
         switch (e.code) {
@@ -1336,8 +1092,8 @@
       if (shareBtn) {
         shareBtn.addEventListener("click", async () => {
           const url = window.location.href;
-          const title = "REAL EXCAVATOR V48";
-          const text = "REAL EXCAVATOR V48 - 포크레인 땅파기 시뮬레이터";
+          const title = "REAL EXCAVATOR V48 LITE";
+          const text = "REAL EXCAVATOR V48 LITE - 포크레인 시뮬레이터";
           if (navigator.share) {
             try {
               await navigator.share({ title, text, url });
@@ -1356,6 +1112,7 @@
       }
     }
 
+    // 컴넷하우스 클릭 감지
     function onCanvasClick(e) {
       if (!excavator.cnhPlate) return;
       const rect = renderer.domElement.getBoundingClientRect();
@@ -1411,6 +1168,7 @@
       orbit.isDragging = false;
     }
 
+    /* ================== 루프 ================== */
     function animate() {
       requestAnimationFrame(animate);
       updateExcavator();
@@ -1438,6 +1196,7 @@
       renderer.render(scene, camera);
     }
 
+    /* ================== 초기화 ================== */
     function init() {
       if (typeof THREE === "undefined") {
         alert(
@@ -1452,9 +1211,8 @@
 
       scene = new THREE.Scene();
       scene.background = new THREE.Color(0x87ceeb);
-      scene.fog = new THREE.Fog(0x87ceeb, 20, 150);
 
-      camera = new THREE.PerspectiveCamera(55, w / h, 0.1, 500);
+      camera = new THREE.PerspectiveCamera(55, w / h, 0.1, 300);
 
       renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(w, h);
@@ -1469,14 +1227,15 @@
       sun.position.set(30, 50, 20);
       sun.castShadow = true;
       sun.shadow.mapSize.set(2048, 2048);
-      sun.shadow.camera.left = -30;
-      sun.shadow.camera.right = 30;
-      sun.shadow.camera.top = 30;
-      sun.shadow.camera.bottom = -30;
+      sun.shadow.camera.left = -40;
+      sun.shadow.camera.right = 40;
+      sun.shadow.camera.top = 40;
+      sun.shadow.camera.bottom = -40;
       scene.add(sun);
 
       raycaster = new THREE.Raycaster();
       mouse = new THREE.Vector2();
+
       renderer.domElement.addEventListener("click", onCanvasClick);
       renderer.domElement.addEventListener("touchend", onCanvasClickTouch);
 
@@ -1489,13 +1248,13 @@
       window.addEventListener("touchmove", onPointerMove, { passive: false });
       window.addEventListener("touchend", onPointerUp);
 
-      createTerrain();
+      createGround();
       createEnvironment();
       buildExcavator();
       setupInput();
       setupUI();
 
-      orbit.radius = 20;
+      orbit.radius = 22;
       orbit.theta = Math.PI / 4;
       orbit.phi = Math.PI / 4;
       orbit.target.set(
