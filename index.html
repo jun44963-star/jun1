@@ -1,15 +1,20 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>REAL EXCAVATOR V48</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"
+  />
+
   <style>
     body {
       margin: 0;
       background: #050505;
       overflow: hidden;
-      font-family: 'Noto Sans KR', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont,
+        sans-serif;
     }
     #excavator-wrapper {
       position: relative;
@@ -18,159 +23,306 @@
       background: #050505;
       overflow: hidden;
     }
-    #canvas-container { position: absolute; inset: 0; }
+    #canvas-container {
+      position: absolute;
+      inset: 0;
+    }
     #ui-layer {
-      position: absolute; inset: 0;
+      position: absolute;
+      inset: 0;
       pointer-events: none;
     }
+
+    /* 시작 오버레이 */
     #start-overlay {
-      position: absolute; inset: 0;
-      background: rgba(0,0,0,0.85);
-      display: flex; flex-direction: column;
-      justify-content: center; align-items: center;
-      z-index: 10; color: #fff;
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+      color: #fff;
       pointer-events: auto;
     }
     #start-overlay h1 {
-      color:#FFD700; font-size: 2.4rem; margin-bottom: 10px;
-      text-shadow: 0 0 20px #FFD700; text-align:center;
+      color: #ffd700;
+      font-size: 2.4rem;
+      margin-bottom: 10px;
+      text-shadow: 0 0 20px #ffd700;
+      text-align: center;
     }
     #start-overlay p {
-      margin-bottom: 20px; color:#ccc; text-align:center; font-size:0.95rem;
+      margin-bottom: 20px;
+      color: #ccc;
+      text-align: center;
+      font-size: 0.95rem;
     }
     #start-btn {
-      padding: 14px 36px; font-size: 1.2rem; font-weight: 900; color: #111;
-      background: linear-gradient(135deg,#FFD700 0%,#FFA500 100%);
-      border: none; border-radius: 999px; cursor: pointer;
-      box-shadow: 0 0 18px rgba(255,165,0,0.6);
-      text-transform: uppercase; letter-spacing: 2px;
+      padding: 14px 36px;
+      font-size: 1.2rem;
+      font-weight: 900;
+      color: #111;
+      background: linear-gradient(135deg, #ffd700 0%, #ffa500 100%);
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      box-shadow: 0 0 18px rgba(255, 165, 0, 0.6);
+      text-transform: uppercase;
+      letter-spacing: 2px;
     }
     #start-btn:active {
       transform: scale(0.96);
-      box-shadow: 0 0 8px rgba(255,215,0,0.7);
+      box-shadow: 0 0 8px rgba(255, 215, 0, 0.7);
     }
+
+    /* 상단 왼쪽 버튼들 */
     #top-left-buttons {
-      position: absolute; top: 10px; left: 10px;
-      display: flex; gap: 6px; pointer-events: auto;
-      flex-wrap: wrap; z-index: 5;
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      display: flex;
+      gap: 6px;
+      pointer-events: auto;
+      flex-wrap: wrap;
+      z-index: 5;
     }
     .top-btn {
-      padding: 5px 10px; font-size: 0.7rem;
-      border-radius: 999px; border: 1px solid #FFD700;
-      background: rgba(0,0,0,0.75); color: #FFD700;
-      cursor: pointer; white-space: nowrap;
+      padding: 5px 10px;
+      font-size: 0.7rem;
+      border-radius: 999px;
+      border: 1px solid #ffd700;
+      background: rgba(0, 0, 0, 0.75);
+      color: #ffd700;
+      cursor: pointer;
+      white-space: nowrap;
     }
     .top-btn:active {
       transform: scale(0.95);
-      background:#FFD700; color:#000;
+      background: #ffd700;
+      color: #000;
     }
+
+    /* 미션 박스 */
     #mission-box {
-      position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-      background: rgba(0,0,0,0.7); border: 2px solid #FFD700; border-radius: 12px;
-      padding: 8px 18px; color:#fff; pointer-events: auto;
-      min-width: 220px; font-size:0.8rem;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.5); text-align:center; z-index: 4;
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.7);
+      border: 2px solid #ffd700;
+      border-radius: 12px;
+      padding: 8px 18px;
+      color: #fff;
+      pointer-events: auto;
+      min-width: 220px;
+      font-size: 0.8rem;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+      text-align: center;
+      z-index: 4;
     }
     #mission-title {
-      color:#FFD700; font-size:0.7rem; font-weight:bold;
-      letter-spacing:2px; margin-bottom: 3px;
+      color: #ffd700;
+      font-size: 0.7rem;
+      font-weight: bold;
+      letter-spacing: 2px;
+      margin-bottom: 3px;
     }
-    #mission-text { font-size:0.85rem; font-weight:bold; text-shadow:1px 1px 2px #000; }
+    #mission-text {
+      font-size: 0.85rem;
+      font-weight: bold;
+      text-shadow: 1px 1px 2px #000;
+    }
+
+    /* 버킷 로드 게이지 */
     #load-gauge-container {
-      position: absolute; top: 60px; right: 10px;
-      width: 22px; height: 140px;
-      background: rgba(0,0,0,0.6); border: 1px solid #777;
-      border-radius: 8px; overflow: hidden; z-index:4;
+      position: absolute;
+      top: 60px;
+      right: 10px;
+      width: 22px;
+      height: 140px;
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid #777;
+      border-radius: 8px;
+      overflow: hidden;
+      z-index: 4;
     }
     #load-fill {
-      position: absolute; bottom: 0; left: 0;
-      width: 100%; height: 0%;
-      background: linear-gradient(to top,#5d4037,#8d6e63);
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 0%;
+      background: linear-gradient(to top, #5d4037, #8d6e63);
       transition: height 0.1s;
     }
     #load-label {
-      position: absolute; top: 205px; right: 6px;
-      color:#fff; font-size:0.6rem; font-weight:bold;
-      text-shadow:1px 1px 2px #000; text-align:center;
-      width:40px; z-index:4;
+      position: absolute;
+      top: 205px;
+      right: 6px;
+      color: #fff;
+      font-size: 0.6rem;
+      font-weight: bold;
+      text-shadow: 1px 1px 2px #000;
+      text-align: center;
+      width: 40px;
+      z-index: 4;
     }
+
+    /* 조작 가이드 */
     #instructions {
-      position: absolute; left: 10px; bottom: 90px;
-      background: linear-gradient(90deg,rgba(0,0,0,0.8),transparent);
-      color:#fff; padding: 10px 14px; border-radius: 10px;
-      border-left: 4px solid #FFD700; max-width: 260px;
-      font-size:0.75rem; pointer-events:auto; z-index:4;
+      position: absolute;
+      left: 10px;
+      bottom: 90px;
+      background: linear-gradient(90deg, rgba(0, 0, 0, 0.8), transparent);
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border-left: 4px solid #ffd700;
+      max-width: 260px;
+      font-size: 0.75rem;
+      pointer-events: auto;
+      z-index: 4;
     }
     #instructions h2 {
-      margin: 0 0 6px 0; font-size: 0.9rem;
-      color:#FFD700; text-shadow:2px 2px 2px #000;
+      margin: 0 0 6px 0;
+      font-size: 0.9rem;
+      color: #ffd700;
+      text-shadow: 2px 2px 2px #000;
     }
-    #instructions ul { list-style:none; padding-left: 10px; margin:0; }
-    #instructions li { margin-bottom: 2px; }
+    #instructions ul {
+      list-style: none;
+      padding-left: 10px;
+      margin: 0;
+    }
+    #instructions li {
+      margin-bottom: 2px;
+    }
     .key {
-      display:inline-block; background:#333; border-radius:4px;
-      padding:1px 4px; border:1px solid #555;
-      font-family:monospace; font-size:0.7rem; margin-right:2px;
+      display: inline-block;
+      background: #333;
+      border-radius: 4px;
+      padding: 1px 4px;
+      border: 1px solid #555;
+      font-family: monospace;
+      font-size: 0.7rem;
+      margin-right: 2px;
     }
-    .key.special { color:#FFD700; border-color:#FFD700; }
-    .tip { color:#FFD700; margin-top:4px; }
+    .key.special {
+      color: #ffd700;
+      border-color: #ffd700;
+    }
+    .tip {
+      color: #ffd700;
+      margin-top: 4px;
+    }
+
+    /* 하단 크레딧 */
     #credit-box {
-      position:absolute; left:10px; bottom:10px;
-      pointer-events:auto; font-size:0.7rem;
-      background:rgba(0,0,0,0.7); padding:4px 8px;
-      border-radius:999px; border:1px solid rgba(255,255,255,0.2);
-      color:#ddd; z-index:4;
+      position: absolute;
+      left: 10px;
+      bottom: 10px;
+      pointer-events: auto;
+      font-size: 0.7rem;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #ddd;
+      z-index: 4;
     }
-    #credit-box a { color:#FFD700; text-decoration:none; }
-    #credit-box a:hover { text-decoration:underline; }
+    #credit-box a {
+      color: #ffd700;
+      text-decoration: none;
+    }
+    #credit-box a:hover {
+      text-decoration: underline;
+    }
+
+    /* 모바일 컨트롤러 */
     #controls-container {
-      position:absolute; left:0; right:0; bottom:0;
-      padding:8px 10px; display:flex; justify-content:space-between;
-      pointer-events:auto;
-      background: linear-gradient(0deg,rgba(0,0,0,0.9),transparent);
-      z-index:3; box-sizing:border-box;
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 8px 10px;
+      display: flex;
+      justify-content: space-between;
+      pointer-events: auto;
+      background: linear-gradient(0deg, rgba(0, 0, 0, 0.9), transparent);
+      z-index: 3;
+      box-sizing: border-box;
     }
     .control-group {
-      display:flex; flex-direction:column; align-items:center;
-      background:rgba(40,40,40,0.8); padding:6px 8px;
-      border-radius:14px; border:1px solid rgba(255,255,255,0.15);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: rgba(40, 40, 40, 0.8);
+      padding: 6px 8px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
     }
     .label {
-      color:#aaa; font-size:0.7rem; font-weight:bold;
-      margin-bottom:3px; letter-spacing:1px;
+      color: #aaa;
+      font-size: 0.7rem;
+      font-weight: bold;
+      margin-bottom: 3px;
+      letter-spacing: 1px;
     }
-    .btn-row { display:flex; gap:6px; margin:2px 0; }
+    .btn-row {
+      display: flex;
+      gap: 6px;
+      margin: 2px 0;
+    }
     .ctrl-btn {
-      width:40px; height:40px; border-radius:50%;
-      border:1px solid #555;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1px solid #555;
       background: radial-gradient(circle at 30% 30%, #444, #111);
-      color:#eee; font-size:0.9rem; font-weight:bold;
-      cursor:pointer;
-      box-shadow:0 2px 4px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.2);
+      color: #eee;
+      font-size: 0.9rem;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5),
+        inset 0 1px 1px rgba(255, 255, 255, 0.2);
       -webkit-tap-highlight-color: transparent;
     }
     .ctrl-btn:active {
-      background:#FFD700; color:#000; transform:scale(0.96);
+      background: #ffd700;
+      color: #000;
+      transform: scale(0.96);
     }
-    @media (max-width:768px){
-      #instructions { display:none; }
-      .ctrl-btn { width:34px; height:34px; font-size:0.8rem; }
-      .control-group { padding:4px 6px; }
+
+    @media (max-width: 768px) {
+      #instructions {
+        display: none;
+      }
+      .ctrl-btn {
+        width: 34px;
+        height: 34px;
+        font-size: 0.8rem;
+      }
+      .control-group {
+        padding: 4px 6px;
+      }
     }
   </style>
 
-  <!-- three.js (외부에서 로딩, 여기서는 허용됨) -->
   <!-- three.js + OrbitControls + RoundedBoxGeometry (jsDelivr) -->
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/geometries/RoundedBoxGeometry.js"></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/geometries/RoundedBoxGeometry.js"></script>
 </head>
 <body>
   <div id="excavator-wrapper">
     <div id="start-overlay">
       <h1>REAL EXCAVATOR V48</h1>
-      <p>F: Dig (땅파기) | R: Dump (버리기)<br>Arrows: Move | WASD + QE: Arm Control</p>
+      <p>
+        F: Dig (땅파기) | R: Dump (버리기)<br />Arrows: Move | WASD + QE: Arm
+        Control
+      </p>
       <button
         id="start-btn"
         type="button"
@@ -191,13 +343,19 @@
     <div id="ui-layer">
       <div id="top-left-buttons">
         <button id="reset-btn" class="top-btn" type="button">초기화</button>
-        <button id="sound-btn" class="top-btn" type="button">🔊 사운드</button>
-        <button id="guide-toggle-btn" class="top-btn" type="button">가이드 숨기기</button>
+        <button id="sound-btn" class="top-btn" type="button">
+          🔊 사운드
+        </button>
+        <button id="guide-toggle-btn" class="top-btn" type="button">
+          가이드 숨기기
+        </button>
       </div>
 
       <div id="mission-box">
-        <div id="mission-title">MISSION</div>
-        <div id="mission-text">Ready...</div>
+        <div id="mission-title">MISSION 1</div>
+        <div id="mission-text">
+          F 키를 꾹 눌러 땅을 깊게 파보세요! (버킷 담기)
+        </div>
       </div>
 
       <div id="load-gauge-container"><div id="load-fill"></div></div>
@@ -206,10 +364,20 @@
       <div id="instructions">
         <h2>조작 가이드 (V48)</h2>
         <ul>
-          <li><span class="key">W</span><span class="key">S</span> : 붐 (내리기/올리기)</li>
-          <li><span class="key">Q</span><span class="key">E</span> : 암 (펴기/접기)</li>
-          <li><span class="key">A</span><span class="key">D</span> : 본체 회전</li>
-          <li><span class="key special">F</span> : <b>땅파기 (Dig)</b></li>
+          <li>
+            <span class="key">W</span><span class="key">S</span> : 붐
+            (내리기/올리기)
+          </li>
+          <li>
+            <span class="key">Q</span><span class="key">E</span> : 암
+            (펴기/접기)
+          </li>
+          <li>
+            <span class="key">A</span><span class="key">D</span> : 본체 회전
+          </li>
+          <li>
+            <span class="key special">F</span> : <b>땅파기 (Dig)</b>
+          </li>
           <li><span class="key">R</span> : 흙버리기 (Dump)</li>
           <li><span class="key">방향키</span> : 주행</li>
           <li class="tip">💡 마우스로 화면을 돌려보세요!</li>
@@ -218,13 +386,19 @@
 
       <div id="credit-box">
         만든이:
-        <a href="https://hjkim20089.tistory.com/" target="_blank" rel="noopener noreferrer">
-          hjkim20089.tistory.com
-        </a>
+        <a
+          href="https://hjkim20089.tistory.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          >hjkim20089.tistory.com</a
+        >
         &nbsp;|&nbsp;
-        <a href="http://cnh.bulgukto.or.kr/" target="_blank" rel="noopener noreferrer">
-          컴넷하우스
-        </a>
+        <a
+          href="http://cnh.bulgukto.or.kr/"
+          target="_blank"
+          rel="noopener noreferrer"
+          >컴넷하우스</a
+        >
       </div>
 
       <div id="controls-container">
@@ -243,719 +417,1051 @@
         <div class="control-group">
           <div class="label">HYDRAULICS</div>
           <div class="btn-row">
-            <button class="ctrl-btn" id="btn-boom-up" type="button">붐(S)↑</button>
-            <button class="ctrl-btn" id="btn-boom-down" type="button">붐(W)↓</button>
+            <button class="ctrl-btn" id="btn-boom-up" type="button">
+              붐(S)↑
+            </button>
+            <button class="ctrl-btn" id="btn-boom-down" type="button">
+              붐(W)↓
+            </button>
           </div>
           <div class="btn-row">
-            <button class="ctrl-btn" id="btn-arm-out" type="button">암(E)↑</button>
-            <button class="ctrl-btn" id="btn-arm-in" type="button">암(Q)↓</button>
+            <button class="ctrl-btn" id="btn-arm-out" type="button">
+              암(E)↑
+            </button>
+            <button class="ctrl-btn" id="btn-arm-in" type="button">
+              암(Q)↓
+            </button>
           </div>
           <div class="btn-row">
-            <button class="ctrl-btn" id="btn-bucket-in" type="button">땅파기(F)</button>
-            <button class="ctrl-btn" id="btn-bucket-out" type="button">버리기(R)</button>
+            <button class="ctrl-btn" id="btn-bucket-in" type="button">
+              땅파기(F)
+            </button>
+            <button class="ctrl-btn" id="btn-bucket-out" type="button">
+              버리기(R)
+            </button>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-<script>
-(function() {
- 
-  }
-  var THREEjs = window.THREE;
-  var OrbitControls = THREEjs.OrbitControls;
-  var RoundedBoxGeometry = THREEjs.RoundedBoxGeometry;
+  <script>
+    (function () {
+      if (!window.THREE) {
+        // 더 이상 alert 안 띄우고, 조용히 포기
+        console.error("THREE가 로드되지 않았습니다.");
+        return;
+      }
 
-  /* ---------- 사운드 매니저 ---------- */
-  function SoundManager(){
-    this.ctx=null; this.isInit=false; this.lastDigTime=0;
-    this.engineOsc=null; this.engineGain=null; this.muted=false;
-  }
-  SoundManager.prototype.init = function(){
-    if(this.isInit) return;
-    var AC = window.AudioContext || window.webkitAudioContext;
-    this.ctx = new AC();
-    this.engineOsc = this.ctx.createOscillator();
-    this.engineOsc.type = "sawtooth";
-    this.engineOsc.frequency.value = 40;
-    this.engineGain = this.ctx.createGain();
-    this.engineGain.gain.value = 0.05;
-    var f = this.ctx.createBiquadFilter();
-    f.type = "lowpass";
-    f.frequency.value = 250;
-    this.engineOsc.connect(f);
-    f.connect(this.engineGain);
-    this.engineGain.connect(this.ctx.destination);
-    this.engineOsc.start();
-    this.isInit = true;
-  };
-  SoundManager.prototype.setRPM = function(active,load){
-    if(!this.isInit) return;
-    var t = this.ctx.currentTime;
-    var targetFreq = active ? (load?55:60) : 40;
-    var baseVol    = active ? 0.1 : 0.05;
-    var targetVol  = this.muted ? 0 : baseVol;
-    this.engineOsc.frequency.setTargetAtTime(targetFreq,t,0.2);
-    this.engineGain.gain.setTargetAtTime(targetVol,t,0.2);
-  };
-  SoundManager.prototype.playDig = function(){
-    if(!this.isInit || this.muted) return;
-    var now = this.ctx.currentTime;
-    if(now - this.lastDigTime < 0.15) return;
-    this.lastDigTime = now;
-    var buf = this.ctx.createBuffer(1,22050,44100);
-    var d = buf.getChannelData(0);
-    for(var i=0;i<22050;i++) d[i] = (Math.random()*2-1)*Math.exp(-i/800);
-    var src = this.ctx.createBufferSource(); src.buffer = buf;
-    var g = this.ctx.createGain(); g.gain.value = 0.4;
-    var f = this.ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 300;
-    src.connect(f); f.connect(g); g.connect(this.ctx.destination);
-    src.start();
-  };
-  SoundManager.prototype.playComplete = function(){
-    if(!this.isInit || this.muted) return;
-    var osc = this.ctx.createOscillator(); osc.type = "sine";
-    osc.frequency.setValueAtTime(600,this.ctx.currentTime);
-    osc.frequency.linearRampToValueAtTime(1200,this.ctx.currentTime+0.1);
-    var g = this.ctx.createGain(); g.gain.value = 0.3;
-    g.gain.exponentialRampToValueAtTime(0.01,this.ctx.currentTime+0.4);
-    osc.connect(g); g.connect(this.ctx.destination);
-    osc.start(); osc.stop(this.ctx.currentTime+0.4);
-  };
-  SoundManager.prototype.toggleMute = function(){
-    this.muted = !this.muted;
-    if(this.isInit && this.engineGain){
-      var t = this.ctx.currentTime;
-      var targetVol = this.muted?0:0.05;
-      this.engineGain.gain.setTargetAtTime(targetVol,t,0.1);
-    }
-    var btn = document.getElementById("sound-btn");
-    if(btn) btn.textContent = this.muted ? "🔇 사운드" : "🔊 사운드";
-  };
-  window.soundMgr = new SoundManager();
-  var soundMgr = window.soundMgr;
+      var THREEjs = window.THREE;
+      var OrbitControls = THREEjs.OrbitControls;
+      var RoundedBoxGeometry = THREEjs.RoundedBoxGeometry;
 
-  /* ---------- 미션 ---------- */
-  var missions = [
-    { id:1, text:"F 키를 꾹 눌러 땅을 깊게 파보세요! (버킷 담기)", check:function(i,s){return s.hasDug;}, complete:false, progress:0 },
-    { id:2, text:"R 키를 눌러 흙을 옆에 쏟아보세요 (버킷 펴기)",    check:function(i,s){return s.hasDumped;}, complete:false, progress:0 }
-  ];
-  var currentMissionIdx = 0;
-  function updateMissionSystem(inputs, state){
-    if(currentMissionIdx >= missions.length) return;
-    var m = missions[currentMissionIdx];
-    var t1 = document.getElementById('mission-title');
-    var t2 = document.getElementById('mission-text');
-    if(t1) t1.innerText = "MISSION " + m.id;
-    if(t2) t2.innerText = m.text;
-    if(m.check(inputs,state)) m.progress += 0.05;
-    if(m.progress >= 1 && !m.complete){
-      m.complete = true;
-      soundMgr.playComplete();
-      setTimeout(function(){
-        currentMissionIdx++;
-        if(currentMissionIdx >= missions.length){
-          if(t1) t1.innerText = "MISSION";
-          if(t2) t2.innerText = "자유 작업 모드!";
+      /* ---------- 사운드 매니저 ---------- */
+      function SoundManager() {
+        this.ctx = null;
+        this.isInit = false;
+        this.lastDigTime = 0;
+        this.engineOsc = null;
+        this.engineGain = null;
+        this.muted = false;
+      }
+      SoundManager.prototype.init = function () {
+        if (this.isInit) return;
+        var AC = window.AudioContext || window.webkitAudioContext;
+        try {
+          this.ctx = new AC();
+        } catch (e) {
+          console.warn("AudioContext 생성 실패", e);
+          return;
         }
-      }, 800);
-    }
-  }
+        this.engineOsc = this.ctx.createOscillator();
+        this.engineOsc.type = "sawtooth";
+        this.engineOsc.frequency.value = 40;
+        this.engineGain = this.ctx.createGain();
+        this.engineGain.gain.value = 0.05;
+        var f = this.ctx.createBiquadFilter();
+        f.type = "lowpass";
+        f.frequency.value = 250;
+        this.engineOsc.connect(f);
+        f.connect(this.engineGain);
+        this.engineGain.connect(this.ctx.destination);
+        this.engineOsc.start();
+        this.isInit = true;
+      };
+      SoundManager.prototype.setRPM = function (active, load) {
+        if (!this.isInit) return;
+        var t = this.ctx.currentTime;
+        var targetFreq = active ? (load ? 55 : 60) : 40;
+        var baseVol = active ? 0.1 : 0.05;
+        var targetVol = this.muted ? 0 : baseVol;
+        this.engineOsc.frequency.setTargetAtTime(targetFreq, t, 0.2);
+        this.engineGain.gain.setTargetAtTime(targetVol, t, 0.2);
+      };
+      SoundManager.prototype.playDig = function () {
+        if (!this.isInit || this.muted) return;
+        var now = this.ctx.currentTime;
+        if (now - this.lastDigTime < 0.15) return;
+        this.lastDigTime = now;
+        var buf = this.ctx.createBuffer(1, 22050, 44100);
+        var d = buf.getChannelData(0);
+        for (var i = 0; i < 22050; i++)
+          d[i] = (Math.random() * 2 - 1) * Math.exp(-i / 800);
+        var src = this.ctx.createBufferSource();
+        src.buffer = buf;
+        var g = this.ctx.createGain();
+        g.gain.value = 0.4;
+        var f = this.ctx.createBiquadFilter();
+        f.type = "lowpass";
+        f.frequency.value = 300;
+        src.connect(f);
+        f.connect(g);
+        g.connect(this.ctx.destination);
+        src.start();
+      };
+      SoundManager.prototype.playComplete = function () {
+        if (!this.isInit || this.muted) return;
+        var osc = this.ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+        osc.frequency.linearRampToValueAtTime(
+          1200,
+          this.ctx.currentTime + 0.1
+        );
+        var g = this.ctx.createGain();
+        g.gain.value = 0.3;
+        g.gain.exponentialRampToValueAtTime(
+          0.01,
+          this.ctx.currentTime + 0.4
+        );
+        osc.connect(g);
+        g.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.4);
+      };
+      SoundManager.prototype.toggleMute = function () {
+        this.muted = !this.muted;
+        if (this.isInit && this.engineGain) {
+          var t = this.ctx.currentTime;
+          var targetVol = this.muted ? 0 : 0.05;
+          this.engineGain.gain.setTargetAtTime(targetVol, t, 0.1);
+        }
+        var btn = document.getElementById("sound-btn");
+        if (btn)
+          btn.textContent = this.muted ? "🔇 사운드" : "🔊 사운드";
+      };
+      window.soundMgr = new SoundManager();
+      var soundMgr = window.soundMgr;
 
-  /* ---------- 재질 & 공용 ---------- */
-  var logoTex = (function(){
-    var c = document.createElement("canvas"); c.width=256; c.height=64;
-    var x = c.getContext("2d");
-    x.fillStyle="#FFA500"; x.fillRect(0,0,256,64);
-    x.font="bold 40px Arial"; x.fillStyle="#000"; x.textAlign="center";
-    x.fillText("HEAVY v48",128,45);
-    return new THREEjs.CanvasTexture(c);
-  })();
-  var cnhTex = (function(){
-    var c = document.createElement("canvas"); c.width=512; c.height=128;
-    var ctx = c.getContext("2d");
-    ctx.fillStyle="#111"; ctx.fillRect(0,0,512,128);
-    ctx.strokeStyle="#FFD700"; ctx.lineWidth=4; ctx.strokeRect(4,4,504,120);
-    ctx.font="bold 46px sans-serif"; ctx.fillStyle="#FFD700"; ctx.textAlign="center";
-    ctx.fillText("컴넷하우스",256,60);
-    ctx.font="24px sans-serif"; ctx.fillStyle="#9fd4ff";
-    ctx.fillText("cnh.bulgukto.or.kr",256,100);
-    return new THREEjs.CanvasTexture(c);
-  })();
-  var MATS = {
-    body:     new THREEjs.MeshStandardMaterial({color:0xFFB300,roughness:0.3,metalness:0.3}),
-    dark:     new THREEjs.MeshStandardMaterial({color:0x1a1a1a,roughness:0.7,metalness:0.6}),
-    chrome:   new THREEjs.MeshStandardMaterial({color:0xffffff,roughness:0.1,metalness:0.9}),
-    logo:     new THREEjs.MeshStandardMaterial({map:logoTex,roughness:0.3}),
-    cnhLogo:  new THREEjs.MeshStandardMaterial({map:cnhTex,roughness:0.4,metalness:0.2,side:THREEjs.DoubleSide}),
-    dirt:     new THREEjs.MeshStandardMaterial({vertexColors:true,roughness:1.0}),
-    dirtPile: new THREEjs.MeshStandardMaterial({color:0x5d4037,roughness:1.0}),
-    coneOrange:new THREEjs.MeshStandardMaterial({color:0xff4400,roughness:0.2}),
-    coneWhite: new THREEjs.MeshStandardMaterial({color:0xffffff,roughness:0.2}),
-    tooth:    new THREEjs.MeshStandardMaterial({color:0x999999,roughness:0.5,metalness:0.7}),
-    dust:     new THREEjs.MeshBasicMaterial({color:0xd7ccc8,transparent:true,opacity:0.3,depthWrite:false})
-  };
-  var SPEED = { move:0.08, turn:0.015, joint:0.01 };
+      /* ---------- 미션 ---------- */
+      var missions = [
+        {
+          id: 1,
+          text: "F 키를 꾹 눌러 땅을 깊게 파보세요! (버킷 담기)",
+          check: function (i, s) {
+            return s.hasDug;
+          },
+          complete: false,
+          progress: 0,
+        },
+        {
+          id: 2,
+          text: "R 키를 눌러 흙을 옆에 쏟아보세요 (버킷 펴기)",
+          check: function (i, s) {
+            return s.hasDumped;
+          },
+          complete: false,
+          progress: 0,
+        },
+      ];
+      var currentMissionIdx = 0;
+      function updateMissionSystem(inputs, state) {
+        var titleEl = document.getElementById("mission-title");
+        var textEl = document.getElementById("mission-text");
+        if (currentMissionIdx >= missions.length) {
+          if (titleEl) titleEl.innerText = "MISSION";
+          if (textEl) textEl.innerText = "자유 작업 모드!";
+          return;
+        }
+        var m = missions[currentMissionIdx];
+        if (titleEl) titleEl.innerText = "MISSION " + m.id;
+        if (textEl) textEl.innerText = m.text;
+        if (m.check(inputs, state)) m.progress += 0.05;
+        if (m.progress >= 1 && !m.complete) {
+          m.complete = true;
+          soundMgr.playComplete();
+          setTimeout(function () {
+            currentMissionIdx++;
+          }, 800);
+        }
+      }
 
-  var scene, camera, renderer, controls;
-  var excavator = {
-    group:null, body:null, boom:null, arm:null, bucket:null,
-    bucketMesh:null, dirtVolume:null, bucketTip:null, cnhPlate:null,
-    boomAng:0.5, armAng:-2.0, bucketAng:0.5
-  };
-  var particles = [];
-  var gameState = { dirtLoad:0, hasDug:false, hasDumped:false, isResisting:false };
-  var inputs = { fwd:0, turn:0, rot:0, boom:0, arm:0, bucket:0 };
-  var lastExcavatorPos = new THREEjs.Vector3();
-  var shakeIntensity = 0;
+      /* ---------- 재질 & 공용 ---------- */
+      var logoTex = (function () {
+        var c = document.createElement("canvas");
+        c.width = 256;
+        c.height = 64;
+        var x = c.getContext("2d");
+        x.fillStyle = "#FFA500";
+        x.fillRect(0, 0, 256, 64);
+        x.font = "bold 40px Arial";
+        x.fillStyle = "#000";
+        x.textAlign = "center";
+        x.fillText("HEAVY v48", 128, 45);
+        return new THREEjs.CanvasTexture(c);
+      })();
+      var cnhTex = (function () {
+        var c = document.createElement("canvas");
+        c.width = 512;
+        c.height = 128;
+        var ctx = c.getContext("2d");
+        ctx.fillStyle = "#111";
+        ctx.fillRect(0, 0, 512, 128);
+        ctx.strokeStyle = "#FFD700";
+        ctx.lineWidth = 4;
+        ctx.strokeRect(4, 4, 504, 120);
+        ctx.font = "bold 46px sans-serif";
+        ctx.fillStyle = "#FFD700";
+        ctx.textAlign = "center";
+        ctx.fillText("컴넷하우스", 256, 60);
+        ctx.font = "24px sans-serif";
+        ctx.fillStyle = "#9fd4ff";
+        ctx.fillText("cnh.bulgukto.or.kr", 256, 100);
+        return new THREEjs.CanvasTexture(c);
+      })();
 
-  var terrainMesh;
-  var TERRAIN_SIZE = 120;
-  var TERRAIN_RES  = 96;
-  var terrainData = new Float32Array((TERRAIN_RES+1)*(TERRAIN_RES+1));
-  var terrainInitHeights = null;
-  var terrainInitColors  = null;
+      var MATS = {
+        body: new THREEjs.MeshStandardMaterial({
+          color: 0xffb300,
+          roughness: 0.3,
+          metalness: 0.3,
+        }),
+        dark: new THREEjs.MeshStandardMaterial({
+          color: 0x1a1a1a,
+          roughness: 0.7,
+          metalness: 0.6,
+        }),
+        chrome: new THREEjs.MeshStandardMaterial({
+          color: 0xffffff,
+          roughness: 0.1,
+          metalness: 0.9,
+        }),
+        logo: new THREEjs.MeshStandardMaterial({
+          map: logoTex,
+          roughness: 0.3,
+        }),
+        cnhLogo: new THREEjs.MeshStandardMaterial({
+          map: cnhTex,
+          roughness: 0.4,
+          metalness: 0.2,
+          side: THREEjs.DoubleSide,
+        }),
+        dirt: new THREEjs.MeshStandardMaterial({
+          vertexColors: true,
+          roughness: 1.0,
+        }),
+        dirtPile: new THREEjs.MeshStandardMaterial({
+          color: 0x5d4037,
+          roughness: 1.0,
+        }),
+        coneOrange: new THREEjs.MeshStandardMaterial({
+          color: 0xff4400,
+          roughness: 0.2,
+        }),
+        coneWhite: new THREEjs.MeshStandardMaterial({
+          color: 0xffffff,
+          roughness: 0.2,
+        }),
+        tooth: new THREEjs.MeshStandardMaterial({
+          color: 0x999999,
+          roughness: 0.5,
+          metalness: 0.7,
+        }),
+        dust: new THREEjs.MeshBasicMaterial({
+          color: 0xd7ccc8,
+          transparent: true,
+          opacity: 0.3,
+          depthWrite: false,
+        }),
+      };
 
-  var raycaster, mouse;
+      var SPEED = { move: 0.08, turn: 0.015, joint: 0.01 };
 
-  function getTerrainHeight(x,z){
-    var half = TERRAIN_SIZE/2;
-    var gx = (x+half)/TERRAIN_SIZE*TERRAIN_RES;
-    var gz = (z+half)/TERRAIN_SIZE*TERRAIN_RES;
-    if(gx<0||gx>=TERRAIN_RES||gz<0||gz>=TERRAIN_RES) return 0;
-    var x0 = Math.floor(gx), z0 = Math.floor(gz);
-    var x1 = Math.min(x0+1,TERRAIN_RES);
-    var z1 = Math.min(z0+1,TERRAIN_RES);
-    var tx = gx-x0, tz = gz-z0;
-    var i00 = z0*(TERRAIN_RES+1)+x0;
-    var i10 = z0*(TERRAIN_RES+1)+x1;
-    var i01 = z1*(TERRAIN_RES+1)+x0;
-    var i11 = z1*(TERRAIN_RES+1)+x1;
-    var h00 = terrainData[i00], h10 = terrainData[i10];
-    var h01 = terrainData[i01], h11 = terrainData[i11];
-    var h0 = h00*(1-tx)+h10*tx;
-    var h1 = h01*(1-tz)+h11*tx;
-    return h0*(1-tz)+h1*tz;
-  }
+      var scene, camera, renderer, controls;
+      var excavator = {
+        group: null,
+        body: null,
+        boom: null,
+        arm: null,
+        bucket: null,
+        bucketMesh: null,
+        dirtVolume: null,
+        bucketTip: null,
+        cnhPlate: null,
+        boomAng: 0.5,
+        armAng: -2.0,
+        bucketAng: 0.5,
+      };
+      var particles = [];
+      var gameState = {
+        dirtLoad: 0,
+        hasDug: false,
+        hasDumped: false,
+        isResisting: false,
+      };
+      var inputs = {
+        fwd: 0,
+        turn: 0,
+        rot: 0,
+        boom: 0,
+        arm: 0,
+        bucket: 0,
+      };
+      var lastExcavatorPos = new THREEjs.Vector3();
+      var shakeIntensity = 0;
 
-  function createTerrain(){
-    var geo = new THREEjs.PlaneGeometry(TERRAIN_SIZE,TERRAIN_SIZE,TERRAIN_RES,TERRAIN_RES);
-    geo.rotateX(-Math.PI/2);
-    var pos = geo.attributes.position;
-    var count = pos.count;
-    geo.setAttribute("color", new THREEjs.BufferAttribute(new Float32Array(count*3),3));
-    var col = geo.attributes.color;
-    var baseC = new THREEjs.Color(0xC2B280);
-    var hillC = new THREEjs.Color(0x8d6e63);
-    for(var i=0;i<count;i++){
-      var x = pos.getX(i), z = pos.getZ(i);
-      var y = Math.sin(x*0.1)*0.2 + Math.cos(z*0.1)*0.2;
-      var d1 = Math.sqrt((x-20)*(x-20)+(z-10)*(z-10)); if(d1<25) y+=(25-d1)*0.25;
-      var d2 = Math.sqrt((x+20)*(x+20)+(z+20)*(z+20)); if(d2<20) y+=(20-d2)*0.2;
-      var d3 = Math.sqrt((x)*(x)+(z+25)*(z+25));       if(d3<20) y+=(20-d3)*0.3;
-      if(Math.sqrt(x*x+z*z)<8) y=0;
-      pos.setY(i,y);
-      terrainData[i] = y;
-      var t = Math.min(1,Math.max(0,(y-0.5)/3));
-      var c = baseC.clone().lerp(hillC,t);
-      col.setXYZ(i,c.r,c.g,c.b);
-    }
-    geo.computeVertexNormals();
-    terrainMesh = new THREEjs.Mesh(geo,MATS.dirt);
-    terrainMesh.receiveShadow = true;
-    scene.add(terrainMesh);
-    terrainInitHeights = new Float32Array(terrainData.length);
-    terrainInitHeights.set(terrainData);
-    terrainInitColors = new Float32Array(col.array.length);
-    terrainInitColors.set(col.array);
-  }
-
-  function createEnvironment(){
-    var coneGeo = new THREEjs.CylinderGeometry(0.05,0.3,0.6,16);
-    for(var i=0;i<8;i++){
-      var grp = new THREEjs.Group();
-      var base = new THREEjs.Mesh(coneGeo,MATS.coneOrange); base.position.y=0.3;
-      var str  = new THREEjs.Mesh(new THREEjs.CylinderGeometry(0.12,0.2,0.15,16),MATS.coneWhite);
-      str.position.y=0.35;
-      grp.add(base,str);
-      var a = (i/8)*Math.PI*2;
-      var x = Math.cos(a)*10;
-      var z = Math.sin(a)*10;
-      grp.position.set(x,getTerrainHeight(x,z),z);
-      grp.castShadow = true;
-      scene.add(grp);
-    }
-  }
-
-  function buildExcavator(){
-    excavator.group = new THREEjs.Group();
-    scene.add(excavator.group);
-
-    var tracks = new THREEjs.Group();
-    excavator.group.add(tracks);
-    var buildTrack = function(zOff){
-      var t = new THREEjs.Group();
-      t.position.set(0,0.5,zOff);
-      var frame = new THREEjs.Mesh(
-        new RoundedBoxGeometry(5.5,0.8,0.8,4,0.1),
-        MATS.dark
+      var terrainMesh;
+      var TERRAIN_SIZE = 120;
+      var TERRAIN_RES = 96;
+      var terrainData = new Float32Array(
+        (TERRAIN_RES + 1) * (TERRAIN_RES + 1)
       );
-      t.add(frame);
-      return t;
-    };
-    tracks.add(buildTrack(1.4),buildTrack(-1.4));
-    var ax = new THREEjs.Mesh(new RoundedBoxGeometry(3,0.4,2.2,2,0.1),MATS.dark);
-    ax.position.y = 0.6;
-    excavator.group.add(ax);
+      var terrainInitHeights = null;
+      var terrainInitColors = null;
 
-    excavator.body = new THREEjs.Group();
-    excavator.body.position.y = 1.1;
-    excavator.group.add(excavator.body);
+      var raycaster, mouse;
 
-    var deck = new THREEjs.Mesh(new RoundedBoxGeometry(3.6,1.2,3.4,4,0.2),MATS.body);
-    deck.position.set(-0.4,0.6,0);
-    deck.castShadow = true;
-    excavator.body.add(deck);
-
-    var cnhPlate = new THREEjs.Mesh(new THREEjs.PlaneGeometry(2.4,0.9),MATS.cnhLogo);
-    cnhPlate.position.set(0,5.0,0);
-    cnhPlate.castShadow = true;
-    excavator.body.add(cnhPlate);
-    excavator.cnhPlate = cnhPlate;
-
-    excavator.boom = new THREEjs.Group();
-    excavator.boom.position.set(0.8,1.5,-0.5);
-    excavator.body.add(excavator.boom);
-    var bMesh = new THREEjs.Mesh(new RoundedBoxGeometry(0.8,6.0,0.6,4,0.15),MATS.body);
-    bMesh.position.set(0,3.0,0);
-    bMesh.castShadow=true;
-    excavator.boom.add(bMesh);
-    var lp = new THREEjs.Mesh(new THREEjs.PlaneGeometry(0.6,3),MATS.logo);
-    lp.position.set(0.41,3.0,0);
-    lp.rotation.set(0,Math.PI/2,-Math.PI/2);
-    excavator.boom.add(lp);
-
-    excavator.arm = new THREEjs.Group();
-    excavator.arm.position.set(0,5.8,0);
-    excavator.boom.add(excavator.arm);
-
-    var ag = new THREEjs.Group();
-    var ash = new THREEjs.Shape();
-    ash.moveTo(-0.3,0.6);
-    ash.lineTo(0.3,0.6);
-    ash.lineTo(0.25,-3.2);
-    ash.lineTo(-0.25,-3.2);
-    ash.lineTo(-0.3,0.6);
-    var ageo = new THREEjs.ExtrudeGeometry(ash,{depth:0.5,bevelEnabled:true,bevelThickness:0.03,bevelSize:0.03,bevelSegments:3});
-    var am = new THREEjs.Mesh(ageo,MATS.body);
-    am.position.set(0,0,-0.25);
-    ag.add(am);
-    excavator.arm.add(ag);
-
-    excavator.bucket = new THREEjs.Group();
-    excavator.bucket.position.set(0,-3.2,0);
-    excavator.arm.add(excavator.bucket);
-
-    var bg = new THREEjs.Group();
-    bg.position.set(0,-0.6,0);
-    bg.rotation.y = Math.PI/2;
-    excavator.bucketMesh = bg;
-    excavator.bucket.add(bg);
-
-    var bw = 0.9;
-    var ws = new THREEjs.Shape();
-    ws.moveTo(0.85,0); ws.lineTo(0,0);
-    ws.quadraticCurveTo(-0.55,0,-0.55,0.6);
-    ws.lineTo(-0.55,0.8);
-    ws.lineTo(-0.5,0.8);
-    ws.lineTo(-0.5,0.6);
-    ws.quadraticCurveTo(-0.5,0.05,0,0.05);
-    ws.lineTo(0.85,0.05);
-    ws.lineTo(0.85,0);
-    var wgeo = new THREEjs.ExtrudeGeometry(ws,{depth:bw,bevelEnabled:false,curveSegments:12});
-    var wm = new THREEjs.Mesh(wgeo,MATS.dark); wm.position.set(0,0,-bw/2); bg.add(wm);
-
-    var tgeo = new THREEjs.CylinderGeometry(0,0.07,0.45,4);
-    for(var i=0;i<5;i++){
-      var t = new THREEjs.Mesh(tgeo,MATS.tooth);
-      t.rotation.set(Math.PI/4,0,-Math.PI/2);
-      t.position.set(1.15,0.03,-bw/2+0.05+i*((bw-0.1)/4));
-      bg.add(t);
-    }
-
-    var dvg = new THREEjs.CylinderGeometry(0.4,0.4,bw,8,1,false,0,Math.PI);
-    excavator.dirtVolume = new THREEjs.Mesh(dvg,MATS.dirtPile);
-    excavator.dirtVolume.rotation.x = Math.PI/2;
-    excavator.dirtVolume.position.set(0.2,0.3,0);
-    excavator.dirtVolume.scale.set(0,0,1);
-    bg.add(excavator.dirtVolume);
-
-    excavator.bucketTip = new THREEjs.Object3D();
-    excavator.bucketTip.position.set(1.2,0.03,0);
-    bg.add(excavator.bucketTip);
-
-    excavator.boom.rotation.x   = excavator.boomAng;
-    excavator.arm.rotation.x    = excavator.armAng;
-    excavator.bucket.rotation.x = excavator.bucketAng;
-  }
-
-  function spawnParticle(pos,type){
-    var geo = new THREEjs.PlaneGeometry(0.3,0.3);
-    var mat = (type==="dust")?MATS.dust:MATS.dirtPile;
-    var mesh = new THREEjs.Mesh(geo,mat);
-    mesh.position.copy(pos);
-    mesh.position.x += (Math.random()-0.5)*0.5;
-    mesh.position.z += (Math.random()-0.5)*0.5;
-    mesh.lookAt(camera.position);
-    scene.add(mesh);
-    particles.push({
-      mesh:mesh,
-      life:1,
-      vel:new THREEjs.Vector3((Math.random()-0.5)*0.05,0.05,(Math.random()-0.5)*0.05)
-    });
-  }
-
-  function modifyTerrain(x,z,delta){
-    if(!terrainMesh) return;
-    var posAttr=terrainMesh.geometry.attributes.position;
-    var colAttr=terrainMesh.geometry.attributes.color;
-    var half = TERRAIN_SIZE/2;
-    var gx = Math.floor((x+half)/TERRAIN_SIZE*TERRAIN_RES);
-    var gz = Math.floor((z+half)/TERRAIN_SIZE*TERRAIN_RES);
-    var radius=2;
-    var modified=false;
-    for(var i=-radius;i<=radius;i++){
-      for(var j=-radius;j<=radius;j++){
-        var xi=gx+i, zi=gz+j;
-        if(xi<0||xi>TERRAIN_RES||zi<0||zi>TERRAIN_RES) continue;
-        var dist=Math.sqrt(i*i+j*j);
-        if(dist>radius) continue;
-        var idx=zi*(TERRAIN_RES+1)+xi;
-        var h=posAttr.getY(idx);
-        var factor=(1-dist/radius)*delta*0.5;
-        h+=factor;
-        if(delta<0 && h<-2.5) h=-2.5;
-        if(delta>0 && h>8)    h=8;
-        posAttr.setY(idx,h);
-        terrainData[idx]=h;
-        if(delta<0) colAttr.setXYZ(idx,0.2,0.15,0.1);
-        else        colAttr.setXYZ(idx,0.35,0.25,0.2);
-        modified=true;
+      function getTerrainHeight(x, z) {
+        var half = TERRAIN_SIZE / 2;
+        var gx = ((x + half) / TERRAIN_SIZE) * TERRAIN_RES;
+        var gz = ((z + half) / TERRAIN_SIZE) * TERRAIN_RES;
+        if (gx < 0 || gx >= TERRAIN_RES || gz < 0 || gz >= TERRAIN_RES)
+          return 0;
+        var x0 = Math.floor(gx),
+          z0 = Math.floor(gz);
+        var x1 = Math.min(x0 + 1, TERRAIN_RES);
+        var z1 = Math.min(z0 + 1, TERRAIN_RES);
+        var tx = gx - x0,
+          tz = gz - z0;
+        var i00 = z0 * (TERRAIN_RES + 1) + x0;
+        var i10 = z0 * (TERRAIN_RES + 1) + x1;
+        var i01 = z1 * (TERRAIN_RES + 1) + x0;
+        var i11 = z1 * (TERRAIN_RES + 1) + x1;
+        var h00 = terrainData[i00],
+          h10 = terrainData[i10];
+        var h01 = terrainData[i01],
+          h11 = terrainData[i11];
+        var h0 = h00 * (1 - tx) + h10 * tx;
+        var h1 = h01 * (1 - tz) + h11 * tx;
+        return h0 * (1 - tz) + h1 * tz;
       }
-    }
-    if(modified){
-      posAttr.needsUpdate=true;
-      colAttr.needsUpdate=true;
-      terrainMesh.geometry.computeVertexNormals();
-    }
-  }
 
-  function updateExcavator(){
-    if(Math.abs(inputs.fwd)>0.1 || Math.abs(inputs.turn)>0.1){
-      var spd = inputs.fwd*SPEED.move;
-      var rot = inputs.turn*SPEED.turn;
-      excavator.group.rotation.y += rot;
-      excavator.group.position.x += Math.cos(excavator.group.rotation.y)*spd;
-      excavator.group.position.z -= Math.sin(excavator.group.rotation.y)*spd;
-    }
-    (function(){
-      var gx = excavator.group.position.x;
-      var gz = excavator.group.position.z;
-      var yaw = excavator.group.rotation.y;
-      var d = 1.5;
-      var cosY = Math.cos(yaw), sinY = Math.sin(yaw);
-      var centerH = getTerrainHeight(gx,gz);
-      var frontX = gx+cosY*d, frontZ = gz-sinY*d;
-      var backX  = gx-cosY*d, backZ  = gz+sinY*d;
-      var leftX  = gx-sinY*d, leftZ  = gz-cosY*d;
-      var rightX = gx+sinY*d, rightZ = gz+cosY*d;
-      var hFront=getTerrainHeight(frontX,frontZ);
-      var hBack =getTerrainHeight(backX,backZ);
-      var hLeft =getTerrainHeight(leftX,leftZ);
-      var hRight=getTerrainHeight(rightX,rightZ);
-      var avg=(centerH+hFront+hBack+hLeft+hRight)/5;
-      var groundOffset=0.05;
-      var targetY=avg+groundOffset;
-      var ny = THREEjs.MathUtils.lerp(excavator.group.position.y,targetY,0.2);
-      if(ny < targetY) ny = targetY;
-      excavator.group.position.y = ny;
-      var slopeF=(hFront-hBack)/(2*d);
-      var slopeS=(hLeft-hRight)/(2*d);
-      var pitch=Math.atan2(slopeF,1);
-      var roll =Math.atan2(slopeS,1);
-      var maxTilt=0.5;
-      var cp=THREEjs.MathUtils.clamp(pitch,-maxTilt,maxTilt);
-      var cr=THREEjs.MathUtils.clamp(roll ,-maxTilt,maxTilt);
-      excavator.group.rotation.x=THREEjs.MathUtils.lerp(excavator.group.rotation.x,cp,0.2);
-      excavator.group.rotation.z=THREEjs.MathUtils.lerp(excavator.group.rotation.z,cr,0.2);
-    })();
-    if(inputs.rot) excavator.body.rotation.y += inputs.rot*SPEED.turn;
-    if(inputs.boom)   excavator.boomAng   += inputs.boom*SPEED.joint;
-    if(inputs.arm)    excavator.armAng    += inputs.arm*SPEED.joint;
-    if(inputs.bucket) excavator.bucketAng += inputs.bucket*SPEED.joint;
-    excavator.boomAng   = THREEjs.MathUtils.clamp(excavator.boomAng,-0.2,2.0);
-    excavator.armAng    = THREEjs.MathUtils.clamp(excavator.armAng,-3.2,-0.2);
-    excavator.bucketAng = THREEjs.MathUtils.clamp(excavator.bucketAng,-0.2,1.5);
-    excavator.boom.rotation.x   = excavator.boomAng;
-    excavator.arm.rotation.x    = excavator.armAng;
-    excavator.bucket.rotation.x = excavator.bucketAng;
+      function createTerrain() {
+        var geo = new THREEjs.PlaneGeometry(
+          TERRAIN_SIZE,
+          TERRAIN_SIZE,
+          TERRAIN_RES,
+          TERRAIN_RES
+        );
+        geo.rotateX(-Math.PI / 2);
+        var pos = geo.attributes.position;
+        var count = pos.count;
+        geo.setAttribute(
+          "color",
+          new THREEjs.BufferAttribute(new Float32Array(count * 3), 3)
+        );
+        var col = geo.attributes.color;
+        var baseC = new THREEjs.Color(0xc2b280);
+        var hillC = new THREEjs.Color(0x8d6e63);
 
-    var tipWorld = new THREEjs.Vector3();
-    excavator.bucketTip.getWorldPosition(tipWorld);
-    var tH = getTerrainHeight(tipWorld.x,tipWorld.z);
-    gameState.isResisting=false;
-    if(tipWorld.y < tH+0.2){
-      if(inputs.bucket>0){
-        gameState.isResisting=true;
-        gameState.hasDug=true;
-        if(gameState.dirtLoad<1){
-          gameState.dirtLoad += 0.005;
-          modifyTerrain(tipWorld.x,tipWorld.z,-0.15);
-          soundMgr.playDig();
-          spawnParticle(tipWorld,"dust");
-          shakeIntensity=0.05;
+        for (var i = 0; i < count; i++) {
+          var x = pos.getX(i),
+            z = pos.getZ(i);
+          var y = Math.sin(x * 0.1) * 0.2 + Math.cos(z * 0.1) * 0.2;
+          var d1 = Math.sqrt((x - 20) * (x - 20) + (z - 10) * (z - 10));
+          if (d1 < 25) y += (25 - d1) * 0.25;
+          var d2 = Math.sqrt((x + 20) * (x + 20) + (z + 20) * (z + 20));
+          if (d2 < 20) y += (20 - d2) * 0.2;
+          var d3 = Math.sqrt(x * x + (z + 25) * (z + 25));
+          if (d3 < 20) y += (20 - d3) * 0.3;
+          if (Math.sqrt(x * x + z * z) < 8) y = 0;
+
+          pos.setY(i, y);
+          terrainData[i] = y;
+
+          var t = Math.min(1, Math.max(0, (y - 0.5) / 3));
+          var c = baseC.clone().lerp(hillC, t);
+          col.setXYZ(i, c.r, c.g, c.b);
+        }
+        geo.computeVertexNormals();
+        terrainMesh = new THREEjs.Mesh(geo, MATS.dirt);
+        terrainMesh.receiveShadow = true;
+        scene.add(terrainMesh);
+
+        terrainInitHeights = new Float32Array(terrainData.length);
+        terrainInitHeights.set(terrainData);
+        terrainInitColors = new Float32Array(col.array.length);
+        terrainInitColors.set(col.array);
+      }
+
+      function createEnvironment() {
+        var coneGeo = new THREEjs.CylinderGeometry(0.05, 0.3, 0.6, 16);
+        for (var i = 0; i < 8; i++) {
+          var grp = new THREEjs.Group();
+          var base = new THREEjs.Mesh(coneGeo, MATS.coneOrange);
+          base.position.y = 0.3;
+          var str = new THREEjs.Mesh(
+            new THREEjs.CylinderGeometry(0.12, 0.2, 0.15, 16),
+            MATS.coneWhite
+          );
+          str.position.y = 0.35;
+          grp.add(base, str);
+          var a = (i / 8) * Math.PI * 2;
+          var x = Math.cos(a) * 10;
+          var z = Math.sin(a) * 10;
+          grp.position.set(x, getTerrainHeight(x, z), z);
+          grp.castShadow = true;
+          scene.add(grp);
         }
       }
-    }
-    if(inputs.bucket<0 && gameState.dirtLoad>0){
-      gameState.hasDumped=true;
-      gameState.dirtLoad -= 0.01;
-      modifyTerrain(tipWorld.x,tipWorld.z,0.2);
-      spawnParticle(tipWorld,"dirt");
-    }
-    if(excavator.dirtVolume){
-      var s = gameState.dirtLoad;
-      excavator.dirtVolume.scale.set(s,s,1);
-      excavator.dirtVolume.visible = s>0.05;
-    }
-    var fill=document.getElementById("load-fill");
-    if(fill) fill.style.height = (gameState.dirtLoad*100) + "%";
-    var active=false; for(var k in inputs){ if(inputs[k]!==0){ active=true; break; } }
-    soundMgr.setRPM(active,gameState.isResisting);
-  }
 
-  function resetGame(){
-    for(var k in inputs) inputs[k]=0;
-    gameState={dirtLoad:0,hasDug:false,hasDumped:false,isResisting:false};
-    currentMissionIdx=0;
-    missions.forEach(function(m){ m.complete=false; m.progress=0; });
-    var t1=document.getElementById("mission-title");
-    var t2=document.getElementById("mission-text");
-    if(t1) t1.innerText="MISSION 1";
-    if(t2) t2.innerText=missions[0].text;
-    var fill=document.getElementById("load-fill");
-    if(fill) fill.style.height="0%";
-    if(terrainMesh && terrainInitHeights && terrainInitColors){
-      var pos=terrainMesh.geometry.attributes.position;
-      var col=terrainMesh.geometry.attributes.color;
-      var count=pos.count;
-      for(var i=0;i<count;i++){
-        var h = terrainInitHeights[i];
-        pos.setY(i,h); terrainData[i]=h;
-        var r=terrainInitColors[i*3];
-        var g=terrainInitColors[i*3+1];
-        var b=terrainInitColors[i*3+2];
-        col.setXYZ(i,r,g,b);
+      function buildExcavator() {
+        excavator.group = new THREEjs.Group();
+        scene.add(excavator.group);
+
+        var tracks = new THREEjs.Group();
+        excavator.group.add(tracks);
+
+        function buildTrack(zOff) {
+          var t = new THREEjs.Group();
+          t.position.set(0, 0.5, zOff);
+          var frame = new THREEjs.Mesh(
+            new RoundedBoxGeometry(5.5, 0.8, 0.8, 4, 0.1),
+            MATS.dark
+          );
+          t.add(frame);
+          return t;
+        }
+        tracks.add(buildTrack(1.4), buildTrack(-1.4));
+
+        var ax = new THREEjs.Mesh(
+          new RoundedBoxGeometry(3, 0.4, 2.2, 2, 0.1),
+          MATS.dark
+        );
+        ax.position.y = 0.6;
+        excavator.group.add(ax);
+
+        excavator.body = new THREEjs.Group();
+        excavator.body.position.y = 1.1;
+        excavator.group.add(excavator.body);
+
+        var deck = new THREEjs.Mesh(
+          new RoundedBoxGeometry(3.6, 1.2, 3.4, 4, 0.2),
+          MATS.body
+        );
+        deck.position.set(-0.4, 0.6, 0);
+        deck.castShadow = true;
+        excavator.body.add(deck);
+
+        var cnhPlate = new THREEjs.Mesh(
+          new THREEjs.PlaneGeometry(2.4, 0.9),
+          MATS.cnhLogo
+        );
+        cnhPlate.position.set(0, 5.0, 0);
+        cnhPlate.castShadow = true;
+        excavator.body.add(cnhPlate);
+        excavator.cnhPlate = cnhPlate;
+
+        excavator.boom = new THREEjs.Group();
+        excavator.boom.position.set(0.8, 1.5, -0.5);
+        excavator.body.add(excavator.boom);
+        var bMesh = new THREEjs.Mesh(
+          new RoundedBoxGeometry(0.8, 6.0, 0.6, 4, 0.15),
+          MATS.body
+        );
+        bMesh.position.set(0, 3.0, 0);
+        bMesh.castShadow = true;
+        excavator.boom.add(bMesh);
+
+        var lp = new THREEjs.Mesh(
+          new THREEjs.PlaneGeometry(0.6, 3),
+          MATS.logo
+        );
+        lp.position.set(0.41, 3.0, 0);
+        lp.rotation.set(0, Math.PI / 2, -Math.PI / 2);
+        excavator.boom.add(lp);
+
+        excavator.arm = new THREEjs.Group();
+        excavator.arm.position.set(0, 5.8, 0);
+        excavator.boom.add(excavator.arm);
+
+        var ag = new THREEjs.Group();
+        var ash = new THREEjs.Shape();
+        ash.moveTo(-0.3, 0.6);
+        ash.lineTo(0.3, 0.6);
+        ash.lineTo(0.25, -3.2);
+        ash.lineTo(-0.25, -3.2);
+        ash.lineTo(-0.3, 0.6);
+        var ageo = new THREEjs.ExtrudeGeometry(ash, {
+          depth: 0.5,
+          bevelEnabled: true,
+          bevelThickness: 0.03,
+          bevelSize: 0.03,
+          bevelSegments: 3,
+        });
+        var am = new THREEjs.Mesh(ageo, MATS.body);
+        am.position.set(0, 0, -0.25);
+        ag.add(am);
+        excavator.arm.add(ag);
+
+        excavator.bucket = new THREEjs.Group();
+        excavator.bucket.position.set(0, -3.2, 0);
+        excavator.arm.add(excavator.bucket);
+
+        var bg = new THREEjs.Group();
+        bg.position.set(0, -0.6, 0);
+        bg.rotation.y = Math.PI / 2;
+        excavator.bucketMesh = bg;
+        excavator.bucket.add(bg);
+
+        var bw = 0.9;
+        var ws = new THREEjs.Shape();
+        ws.moveTo(0.85, 0);
+        ws.lineTo(0, 0);
+        ws.quadraticCurveTo(-0.55, 0, -0.55, 0.6);
+        ws.lineTo(-0.55, 0.8);
+        ws.lineTo(-0.5, 0.8);
+        ws.lineTo(-0.5, 0.6);
+        ws.quadraticCurveTo(-0.5, 0.05, 0, 0.05);
+        ws.lineTo(0.85, 0.05);
+        ws.lineTo(0.85, 0);
+        var wgeo = new THREEjs.ExtrudeGeometry(ws, {
+          depth: bw,
+          bevelEnabled: false,
+          curveSegments: 12,
+        });
+        var wm = new THREEjs.Mesh(wgeo, MATS.dark);
+        wm.position.set(0, 0, -bw / 2);
+        bg.add(wm);
+
+        var tgeo = new THREEjs.CylinderGeometry(0, 0.07, 0.45, 4);
+        for (var i = 0; i < 5; i++) {
+          var t = new THREEjs.Mesh(tgeo, MATS.tooth);
+          t.rotation.set(Math.PI / 4, 0, -Math.PI / 2);
+          t.position.set(
+            1.15,
+            0.03,
+            -bw / 2 + 0.05 + (i * (bw - 0.1)) / 4
+          );
+          bg.add(t);
+        }
+
+        var dvg = new THREEjs.CylinderGeometry(0.4, 0.4, bw, 8, 1, false, 0, Math.PI);
+        excavator.dirtVolume = new THREEjs.Mesh(dvg, MATS.dirtPile);
+        excavator.dirtVolume.rotation.x = Math.PI / 2;
+        excavator.dirtVolume.position.set(0.2, 0.3, 0);
+        excavator.dirtVolume.scale.set(0, 0, 1);
+        bg.add(excavator.dirtVolume);
+
+        excavator.bucketTip = new THREEjs.Object3D();
+        excavator.bucketTip.position.set(1.2, 0.03, 0);
+        bg.add(excavator.bucketTip);
+
+        excavator.boom.rotation.x = excavator.boomAng;
+        excavator.arm.rotation.x = excavator.armAng;
+        excavator.bucket.rotation.x = excavator.bucketAng;
       }
-      pos.needsUpdate=true;
-      col.needsUpdate=true;
-      terrainMesh.geometry.computeVertexNormals();
-    }
-    excavator.group.position.set(0,0,0);
-    excavator.group.rotation.set(0,0,0);
-    excavator.body.rotation.set(0,0,0);
-    excavator.boomAng=0.5;
-    excavator.armAng=-2.0;
-    excavator.bucketAng=0.5;
-    excavator.boom.rotation.x=excavator.boomAng;
-    excavator.arm.rotation.x=excavator.armAng;
-    excavator.bucket.rotation.x=excavator.bucketAng;
-    if(excavator.dirtVolume){
-      excavator.dirtVolume.scale.set(0,0,1);
-      excavator.dirtVolume.visible=false;
-    }
-    particles.forEach(function(p){ scene.remove(p.mesh); });
-    particles.length=0;
-    camera.position.set(15,12,15);
-    controls.target.set(0,1.5,0);
-    controls.update();
-    lastExcavatorPos.copy(excavator.group.position);
-  }
 
-  function setupInput(){
-    var onKey = function(e,v){
-      switch(e.code){
-        case "ArrowUp":   inputs.fwd=v;  break;
-        case "ArrowDown": inputs.fwd=-v; break;
-        case "ArrowLeft": inputs.turn=v; break;
-        case "ArrowRight":inputs.turn=-v;break;
-        case "KeyW":      inputs.boom=v; break;
-        case "KeyS":      inputs.boom=-v;break;
-        case "KeyE":      inputs.arm=v;  break;
-        case "KeyQ":      inputs.arm=-v; break;
-        case "KeyF":      inputs.bucket=v;  break;
-        case "KeyR":      inputs.bucket=-v; break;
-        case "KeyA":      inputs.rot=v;  break;
-        case "KeyD":      inputs.rot=-v; break;
+      function spawnParticle(pos, type) {
+        var geo = new THREEjs.PlaneGeometry(0.3, 0.3);
+        var mat = type === "dust" ? MATS.dust : MATS.dirtPile;
+        var mesh = new THREEjs.Mesh(geo, mat);
+        mesh.position.copy(pos);
+        mesh.position.x += (Math.random() - 0.5) * 0.5;
+        mesh.position.z += (Math.random() - 0.5) * 0.5;
+        mesh.lookAt(camera.position);
+        scene.add(mesh);
+        particles.push({
+          mesh: mesh,
+          life: 1,
+          vel: new THREEjs.Vector3(
+            (Math.random() - 0.5) * 0.05,
+            0.05,
+            (Math.random() - 0.5) * 0.05
+          ),
+        });
       }
-    };
-    window.addEventListener("keydown", function(e){ onKey(e,1); });
-    window.addEventListener("keyup",   function(e){ onKey(e,0); });
 
-    function bind(id,key,val){
-      var b = document.getElementById(id);
-      if(!b) return;
-      var set = function(v){ inputs[key] = v; };
-      b.addEventListener("mousedown", function(){ set(val); });
-      b.addEventListener("mouseup",   function(){ set(0); });
-      b.addEventListener("mouseleave",function(){ set(0); });
-      b.addEventListener("touchstart",function(e){ e.preventDefault(); set(val); });
-      b.addEventListener("touchend",  function(e){ e.preventDefault(); set(0); });
-    }
-    bind("btn-fwd","fwd",1);
-    bind("btn-back","fwd",-1);
-    bind("btn-left","turn",1);
-    bind("btn-right","turn",-1);
-    bind("btn-boom-up","boom",-1);
-    bind("btn-boom-down","boom",1);
-    bind("btn-arm-out","arm",1);
-    bind("btn-arm-in","arm",-1);
-    bind("btn-bucket-in","bucket",1);
-    bind("btn-bucket-out","bucket",-1);
-  }
-
-  function setupUI(){
-    var resetBtn = document.getElementById("reset-btn");
-    if(resetBtn) resetBtn.addEventListener("click", resetGame);
-    var soundBtn = document.getElementById("sound-btn");
-    if(soundBtn) soundBtn.addEventListener("click", function(){ soundMgr.toggleMute(); });
-    var guideBtn = document.getElementById("guide-toggle-btn");
-    if(guideBtn){
-      guideBtn.addEventListener("click", function(){
-        var inst = document.getElementById("instructions");
-        if(!inst) return;
-        var hide = inst.style.display === "none";
-        inst.style.display = hide ? "block" : "none";
-        guideBtn.textContent = hide ? "가이드 숨기기" : "가이드 보이기";
-      });
-    }
-  }
-
-  function onCanvasClick(e){
-    if(!excavator.cnhPlate) return;
-    var rect = renderer.domElement.getBoundingClientRect();
-    var x = (e.clientX-rect.left)/rect.width;
-    var y = (e.clientY-rect.top)/rect.height;
-    mouse.x = x*2-1;
-    mouse.y = -y*2+1;
-    raycaster.setFromCamera(mouse,camera);
-    var hit = raycaster.intersectObject(excavator.cnhPlate,true);
-    if(hit.length>0){
-      window.open("http://cnh.bulgukto.or.kr/","_blank","noopener");
-    }
-  }
-  function onCanvasClickTouch(e){
-    if(!excavator.cnhPlate || !e.changedTouches[0]) return;
-    var t = e.changedTouches[0];
-    var rect = renderer.domElement.getBoundingClientRect();
-    var x = (t.clientX-rect.left)/rect.width;
-    var y = (t.clientY-rect.top)/rect.height;
-    mouse.x = x*2-1;
-    mouse.y = -y*2+1;
-    raycaster.setFromCamera(mouse,camera);
-    var hit = raycaster.intersectObject(excavator.cnhPlate,true);
-    if(hit.length>0){
-      window.open("http://cnh.bulgukto.or.kr/","_blank","noopener");
-    }
-  }
-
-  function animate(){
-    requestAnimationFrame(animate);
-    updateExcavator();
-    updateMissionSystem(inputs,gameState);
-    for(var i=particles.length-1;i>=0;i--){
-      var p = particles[i];
-      p.life -= 0.02;
-      p.mesh.position.add(p.vel);
-      p.mesh.lookAt(camera.position);
-      p.mesh.material.opacity = p.life*0.5;
-      if(p.life<=0){
-        scene.remove(p.mesh);
-        particles.splice(i,1);
+      function modifyTerrain(x, z, delta) {
+        if (!terrainMesh) return;
+        var posAttr = terrainMesh.geometry.attributes.position;
+        var colAttr = terrainMesh.geometry.attributes.color;
+        var half = TERRAIN_SIZE / 2;
+        var gx = Math.floor(((x + half) / TERRAIN_SIZE) * TERRAIN_RES);
+        var gz = Math.floor(((z + half) / TERRAIN_SIZE) * TERRAIN_RES);
+        var radius = 2;
+        var modified = false;
+        for (var i = -radius; i <= radius; i++) {
+          for (var j = -radius; j <= radius; j++) {
+            var xi = gx + i,
+              zi = gz + j;
+            if (
+              xi < 0 ||
+              xi > TERRAIN_RES ||
+              zi < 0 ||
+              zi > TERRAIN_RES
+            )
+              continue;
+            var dist = Math.sqrt(i * i + j * j);
+            if (dist > radius) continue;
+            var idx = zi * (TERRAIN_RES + 1) + xi;
+            var h = posAttr.getY(idx);
+            var factor = (1 - dist / radius) * delta * 0.5;
+            h += factor;
+            if (delta < 0 && h < -2.5) h = -2.5;
+            if (delta > 0 && h > 8) h = 8;
+            posAttr.setY(idx, h);
+            terrainData[idx] = h;
+            if (delta < 0) colAttr.setXYZ(idx, 0.2, 0.15, 0.1);
+            else colAttr.setXYZ(idx, 0.35, 0.25, 0.2);
+            modified = true;
+          }
+        }
+        if (modified) {
+          posAttr.needsUpdate = true;
+          colAttr.needsUpdate = true;
+          terrainMesh.geometry.computeVertexNormals();
+        }
       }
-    }
-    if(excavator.group){
-      var current = excavator.group.position.clone();
-      var delta = current.clone().sub(lastExcavatorPos);
-      camera.position.add(delta);
-      controls.target.copy(current);
-      controls.target.y += 1.5;
-      lastExcavatorPos.copy(current);
-    }
-    controls.update();
-    renderer.render(scene,camera);
-  }
 
-  function init(){
-    var container = document.getElementById("canvas-container");
-    scene = new THREEjs.Scene();
-    scene.background = new THREEjs.Color(0x87CEEB);
-    scene.fog = new THREEjs.Fog(0x87CEEB,20,150);
-    var w = container.clientWidth;
-    var h = container.clientHeight;
-    camera = new THREEjs.PerspectiveCamera(55,w/h,0.1,500);
-    camera.position.set(15,12,15);
-    renderer = new THREEjs.WebGLRenderer({antialias:true});
-    renderer.setSize(w,h);
-    renderer.setPixelRatio(window.devicePixelRatio||1);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREEjs.PCFSoftShadowMap;
-    container.appendChild(renderer.domElement);
-    controls = new OrbitControls(camera,renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.minDistance = 5;
-    controls.maxDistance = 60;
-    controls.target.set(0,1.5,0);
-    var amb = new THREEjs.HemisphereLight(0xffffff,0x555555,0.7);
-    scene.add(amb);
-    var sun = new THREEjs.DirectionalLight(0xfffae0,1.3);
-    sun.position.set(30,50,20);
-    sun.castShadow = true;
-    sun.shadow.mapSize.set(2048,2048);
-    sun.shadow.camera.left=-30;
-    sun.shadow.camera.right=30;
-    sun.shadow.camera.top=30;
-    sun.shadow.camera.bottom=-30;
-    scene.add(sun);
-    raycaster = new THREEjs.Raycaster();
-    mouse = new THREEjs.Vector2();
-    renderer.domElement.addEventListener("click", onCanvasClick);
-    renderer.domElement.addEventListener("touchend", onCanvasClickTouch);
-    createTerrain();
-    createEnvironment();
-    buildExcavator();
-    setupInput();
-    setupUI();
-    lastExcavatorPos.copy(excavator.group.position);
-    window.addEventListener("resize", function(){
-      var w = container.clientWidth, h = container.clientHeight;
-      renderer.setSize(w,h);
-      camera.aspect = w/h;
-      camera.updateProjectionMatrix();
-    });
-    animate();
-  }
+      function updateExcavator() {
+        if (Math.abs(inputs.fwd) > 0.1 || Math.abs(inputs.turn) > 0.1) {
+          var spd = inputs.fwd * SPEED.move;
+          var rot = inputs.turn * SPEED.turn;
+          excavator.group.rotation.y += rot;
+          excavator.group.position.x +=
+            Math.cos(excavator.group.rotation.y) * spd;
+          excavator.group.position.z -=
+            Math.sin(excavator.group.rotation.y) * spd;
+        }
 
-  if(document.readyState === "complete" || document.readyState === "interactive"){
-    setTimeout(init,0);
-  }else{
-    document.addEventListener("DOMContentLoaded", init);
-  }
-})();
-</script>
+        (function () {
+          var gx = excavator.group.position.x;
+          var gz = excavator.group.position.z;
+          var yaw = excavator.group.rotation.y;
+          var d = 1.5;
+          var cosY = Math.cos(yaw),
+            sinY = Math.sin(yaw);
+          var centerH = getTerrainHeight(gx, gz);
+          var frontX = gx + cosY * d,
+            frontZ = gz - sinY * d;
+          var backX = gx - cosY * d,
+            backZ = gz + sinY * d;
+          var leftX = gx - sinY * d,
+            leftZ = gz - cosY * d;
+          var rightX = gx + sinY * d,
+            rightZ = gz + cosY * d;
+          var hFront = getTerrainHeight(frontX, frontZ);
+          var hBack = getTerrainHeight(backX, backZ);
+          var hLeft = getTerrainHeight(leftX, leftZ);
+          var hRight = getTerrainHeight(rightX, rightZ);
+          var avg = (centerH + hFront + hBack + hLeft + hRight) / 5;
+          var groundOffset = 0.05;
+          var targetY = avg + groundOffset;
+          var ny = THREEjs.MathUtils.lerp(
+            excavator.group.position.y,
+            targetY,
+            0.2
+          );
+          if (ny < targetY) ny = targetY;
+          excavator.group.position.y = ny;
+
+          var slopeF = (hFront - hBack) / (2 * d);
+          var slopeS = (hLeft - hRight) / (2 * d);
+          var pitch = Math.atan2(slopeF, 1);
+          var roll = Math.atan2(slopeS, 1);
+          var maxTilt = 0.5;
+          var cp = THREEjs.MathUtils.clamp(pitch, -maxTilt, maxTilt);
+          var cr = THREEjs.MathUtils.clamp(roll, -maxTilt, maxTilt);
+          excavator.group.rotation.x = THREEjs.MathUtils.lerp(
+            excavator.group.rotation.x,
+            cp,
+            0.2
+          );
+          excavator.group.rotation.z = THREEjs.MathUtils.lerp(
+            excavator.group.rotation.z,
+            cr,
+            0.2
+          );
+        })();
+
+        if (inputs.rot) excavator.body.rotation.y += inputs.rot * SPEED.turn;
+        if (inputs.boom) excavator.boomAng += inputs.boom * SPEED.joint;
+        if (inputs.arm) excavator.armAng += inputs.arm * SPEED.joint;
+        if (inputs.bucket) excavator.bucketAng += inputs.bucket * SPEED.joint;
+
+        excavator.boomAng = THREEjs.MathUtils.clamp(
+          excavator.boomAng,
+          -0.2,
+          2.0
+        );
+        excavator.armAng = THREEjs.MathUtils.clamp(
+          excavator.armAng,
+          -3.2,
+          -0.2
+        );
+        excavator.bucketAng = THREEjs.MathUtils.clamp(
+          excavator.bucketAng,
+          -0.2,
+          1.5
+        ); // 약 85~90도 정도
+
+        excavator.boom.rotation.x = excavator.boomAng;
+        excavator.arm.rotation.x = excavator.armAng;
+        excavator.bucket.rotation.x = excavator.bucketAng;
+
+        var tipWorld = new THREEjs.Vector3();
+        excavator.bucketTip.getWorldPosition(tipWorld);
+        var tH = getTerrainHeight(tipWorld.x, tipWorld.z);
+        gameState.isResisting = false;
+
+        if (tipWorld.y < tH + 0.2) {
+          if (inputs.bucket > 0) {
+            gameState.isResisting = true;
+            gameState.hasDug = true;
+            if (gameState.dirtLoad < 1) {
+              gameState.dirtLoad += 0.005;
+              modifyTerrain(tipWorld.x, tipWorld.z, -0.15);
+              soundMgr.playDig();
+              spawnParticle(tipWorld, "dust");
+              shakeIntensity = 0.05;
+            }
+          }
+        }
+
+        if (inputs.bucket < 0 && gameState.dirtLoad > 0) {
+          gameState.hasDumped = true;
+          gameState.dirtLoad -= 0.01;
+          modifyTerrain(tipWorld.x, tipWorld.z, 0.2);
+          spawnParticle(tipWorld, "dirt");
+        }
+
+        if (excavator.dirtVolume) {
+          var s = gameState.dirtLoad;
+          excavator.dirtVolume.scale.set(s, s, 1);
+          excavator.dirtVolume.visible = s > 0.05;
+        }
+
+        var fill = document.getElementById("load-fill");
+        if (fill) fill.style.height = gameState.dirtLoad * 100 + "%";
+
+        var active = false;
+        for (var k in inputs) {
+          if (inputs[k] !== 0) {
+            active = true;
+            break;
+          }
+        }
+        soundMgr.setRPM(active, gameState.isResisting);
+      }
+
+      function resetGame() {
+        for (var k in inputs) inputs[k] = 0;
+        gameState = {
+          dirtLoad: 0,
+          hasDug: false,
+          hasDumped: false,
+          isResisting: false,
+        };
+        currentMissionIdx = 0;
+        missions.forEach(function (m) {
+          m.complete = false;
+          m.progress = 0;
+        });
+        var t1 = document.getElementById("mission-title");
+        var t2 = document.getElementById("mission-text");
+        if (t1) t1.innerText = "MISSION 1";
+        if (t2) t2.innerText = missions[0].text;
+        var fill = document.getElementById("load-fill");
+        if (fill) fill.style.height = "0%";
+
+        if (terrainMesh && terrainInitHeights && terrainInitColors) {
+          var pos = terrainMesh.geometry.attributes.position;
+          var col = terrainMesh.geometry.attributes.color;
+          var count = pos.count;
+          for (var i = 0; i < count; i++) {
+            var h = terrainInitHeights[i];
+            pos.setY(i, h);
+            terrainData[i] = h;
+            var r = terrainInitColors[i * 3];
+            var g = terrainInitColors[i * 3 + 1];
+            var b = terrainInitColors[i * 3 + 2];
+            col.setXYZ(i, r, g, b);
+          }
+          pos.needsUpdate = true;
+          col.needsUpdate = true;
+          terrainMesh.geometry.computeVertexNormals();
+        }
+
+        excavator.group.position.set(0, 0, 0);
+        excavator.group.rotation.set(0, 0, 0);
+        excavator.body.rotation.set(0, 0, 0);
+        excavator.boomAng = 0.5;
+        excavator.armAng = -2.0;
+        excavator.bucketAng = 0.5;
+        excavator.boom.rotation.x = excavator.boomAng;
+        excavator.arm.rotation.x = excavator.armAng;
+        excavator.bucket.rotation.x = excavator.bucketAng;
+        if (excavator.dirtVolume) {
+          excavator.dirtVolume.scale.set(0, 0, 1);
+          excavator.dirtVolume.visible = false;
+        }
+
+        particles.forEach(function (p) {
+          scene.remove(p.mesh);
+        });
+        particles.length = 0;
+
+        camera.position.set(15, 12, 15);
+        controls.target.set(0, 1.5, 0);
+        controls.update();
+        lastExcavatorPos.copy(excavator.group.position);
+      }
+
+      function setupInput() {
+        function onKey(e, v) {
+          switch (e.code) {
+            case "ArrowUp":
+              inputs.fwd = v;
+              break;
+            case "ArrowDown":
+              inputs.fwd = -v;
+              break;
+            case "ArrowLeft":
+              inputs.turn = v;
+              break;
+            case "ArrowRight":
+              inputs.turn = -v;
+              break;
+            case "KeyW":
+              inputs.boom = v;
+              break;
+            case "KeyS":
+              inputs.boom = -v;
+              break;
+            case "KeyE":
+              inputs.arm = v;
+              break;
+            case "KeyQ":
+              inputs.arm = -v;
+              break;
+            case "KeyF":
+              inputs.bucket = v;
+              break;
+            case "KeyR":
+              inputs.bucket = -v;
+              break;
+            case "KeyA":
+              inputs.rot = v;
+              break;
+            case "KeyD":
+              inputs.rot = -v;
+              break;
+          }
+        }
+        window.addEventListener("keydown", function (e) {
+          onKey(e, 1);
+        });
+        window.addEventListener("keyup", function (e) {
+          onKey(e, 0);
+        });
+
+        function bind(id, key, val) {
+          var b = document.getElementById(id);
+          if (!b) return;
+          var set = function (v) {
+            inputs[key] = v;
+          };
+          b.addEventListener("mousedown", function () {
+            set(val);
+          });
+          b.addEventListener("mouseup", function () {
+            set(0);
+          });
+          b.addEventListener("mouseleave", function () {
+            set(0);
+          });
+          b.addEventListener("touchstart", function (e) {
+            e.preventDefault();
+            set(val);
+          });
+          b.addEventListener("touchend", function (e) {
+            e.preventDefault();
+            set(0);
+          });
+        }
+        bind("btn-fwd", "fwd", 1);
+        bind("btn-back", "fwd", -1);
+        bind("btn-left", "turn", 1);
+        bind("btn-right", "turn", -1);
+        bind("btn-boom-up", "boom", -1);
+        bind("btn-boom-down", "boom", 1);
+        bind("btn-arm-out", "arm", 1);
+        bind("btn-arm-in", "arm", -1);
+        bind("btn-bucket-in", "bucket", 1);
+        bind("btn-bucket-out", "bucket", -1);
+      }
+
+      function setupUI() {
+        var resetBtn = document.getElementById("reset-btn");
+        if (resetBtn) resetBtn.addEventListener("click", resetGame);
+
+        var soundBtn = document.getElementById("sound-btn");
+        if (soundBtn)
+          soundBtn.addEventListener("click", function () {
+            soundMgr.toggleMute();
+          });
+
+        var guideBtn = document.getElementById("guide-toggle-btn");
+        if (guideBtn) {
+          guideBtn.addEventListener("click", function () {
+            var inst = document.getElementById("instructions");
+            if (!inst) return;
+            var hide = inst.style.display === "none";
+            inst.style.display = hide ? "block" : "none";
+            guideBtn.textContent = hide ? "가이드 숨기기" : "가이드 보이기";
+          });
+        }
+      }
+
+      function onCanvasClick(e) {
+        if (!excavator.cnhPlate) return;
+        var rect = renderer.domElement.getBoundingClientRect();
+        var x = (e.clientX - rect.left) / rect.width;
+        var y = (e.clientY - rect.top) / rect.height;
+        mouse.x = x * 2 - 1;
+        mouse.y = -y * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+        var hit = raycaster.intersectObject(excavator.cnhPlate, true);
+        if (hit.length > 0) {
+          window.open("http://cnh.bulgukto.or.kr/", "_blank", "noopener");
+        }
+      }
+      function onCanvasClickTouch(e) {
+        if (!excavator.cnhPlate || !e.changedTouches[0]) return;
+        var t = e.changedTouches[0];
+        var rect = renderer.domElement.getBoundingClientRect();
+        var x = (t.clientX - rect.left) / rect.width;
+        var y = (t.clientY - rect.top) / rect.height;
+        mouse.x = x * 2 - 1;
+        mouse.y = -y * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+        var hit = raycaster.intersectObject(excavator.cnhPlate, true);
+        if (hit.length > 0) {
+          window.open("http://cnh.bulgukto.or.kr/", "_blank", "noopener");
+        }
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+        updateExcavator();
+        updateMissionSystem(inputs, gameState);
+
+        for (var i = particles.length - 1; i >= 0; i--) {
+          var p = particles[i];
+          p.life -= 0.02;
+          p.mesh.position.add(p.vel);
+          p.mesh.lookAt(camera.position);
+          p.mesh.material.opacity = p.life * 0.5;
+          if (p.life <= 0) {
+            scene.remove(p.mesh);
+            particles.splice(i, 1);
+          }
+        }
+
+        if (excavator.group) {
+          var current = excavator.group.position.clone();
+          var delta = current.clone().sub(lastExcavatorPos);
+          camera.position.add(delta);
+          controls.target.copy(current);
+          controls.target.y += 1.5;
+          lastExcavatorPos.copy(current);
+        }
+
+        controls.update();
+        renderer.render(scene, camera);
+      }
+
+      function init() {
+        var container = document.getElementById("canvas-container");
+        scene = new THREEjs.Scene();
+        scene.background = new THREEjs.Color(0x87ceeb);
+        scene.fog = new THREEjs.Fog(0x87ceeb, 20, 150);
+
+        var w = container.clientWidth;
+        var h = container.clientHeight;
+        camera = new THREEjs.PerspectiveCamera(55, w / h, 0.1, 500);
+        camera.position.set(15, 12, 15);
+
+        renderer = new THREEjs.WebGLRenderer({ antialias: true });
+        renderer.setSize(w, h);
+        renderer.setPixelRatio(window.devicePixelRatio || 1);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREEjs.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.minDistance = 5;
+        controls.maxDistance = 60;
+        controls.target.set(0, 1.5, 0);
+
+        var amb = new THREEjs.HemisphereLight(0xffffff, 0x555555, 0.7);
+        scene.add(amb);
+        var sun = new THREEjs.DirectionalLight(0xfffae0, 1.3);
+        sun.position.set(30, 50, 20);
+        sun.castShadow = true;
+        sun.shadow.mapSize.set(2048, 2048);
+        sun.shadow.camera.left = -30;
+        sun.shadow.camera.right = 30;
+        sun.shadow.camera.top = 30;
+        sun.shadow.camera.bottom = -30;
+        scene.add(sun);
+
+        raycaster = new THREEjs.Raycaster();
+        mouse = new THREEjs.Vector2();
+        renderer.domElement.addEventListener("click", onCanvasClick);
+        renderer.domElement.addEventListener("touchend", onCanvasClickTouch);
+
+        createTerrain();
+        createEnvironment();
+        buildExcavator();
+        setupInput();
+        setupUI();
+
+        lastExcavatorPos.copy(excavator.group.position);
+
+        window.addEventListener("resize", function () {
+          var w = container.clientWidth,
+            h = container.clientHeight;
+          renderer.setSize(w, h);
+          camera.aspect = w / h;
+          camera.updateProjectionMatrix();
+        });
+
+        animate();
+      }
+
+      if (
+        document.readyState === "complete" ||
+        document.readyState === "interactive"
+      ) {
+        setTimeout(init, 0);
+      } else {
+        document.addEventListener("DOMContentLoaded", init);
+      }
+    })();
+  </script>
 </body>
 </html>
-
-
